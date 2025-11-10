@@ -27,7 +27,7 @@
           <div class="stat-icon">🏆</div>
           <div class="stat-value">{{ (data.winrate * 100).toFixed(0) }}%</div>
           <div class="stat-label">Win Rate</div>
-          <div class="win-loss">{{ data.victory.true }}W - {{ data.victory.false }}L</div>
+          <div class="win-loss">{{ getWins(data.victory) }}W - {{ getLosses(data.victory) }}L</div>
         </div>
       </div>
 
@@ -45,6 +45,14 @@ defineProps({
     required: true
   }
 })
+
+const getWins = (victory) => {
+  return victory.true || victory['true'] || 0
+}
+
+const getLosses = (victory) => {
+  return victory.false || victory['false'] || 0
+}
 </script>
 
 <style scoped>

@@ -36,27 +36,16 @@
           </div>
         </div>
 
-        <div class="region-select">
+        <!-- Region selector hidden for now - not currently used by API -->
+        <!-- <div class="region-select">
           <label for="region">Region</label>
           <select id="region" v-model="region" :disabled="loading">
-            <option value="na1">North America</option>
             <option value="euw1">Europe West</option>
+            <option value="na1">North America</option>
             <option value="eun1">Europe Nordic & East</option>
             <option value="kr">Korea</option>
-            <option value="br1">Brazil</option>
-            <option value="jp1">Japan</option>
-            <option value="la1">Latin America North</option>
-            <option value="la2">Latin America South</option>
-            <option value="oc1">Oceania</option>
-            <option value="tr1">Turkey</option>
-            <option value="ru">Russia</option>
-            <option value="ph2">Philippines</option>
-            <option value="sg2">Singapore</option>
-            <option value="th2">Thailand</option>
-            <option value="tw2">Taiwan</option>
-            <option value="vn2">Vietnam</option>
           </select>
-        </div>
+        </div> -->
 
         <button
           class="submit-button"
@@ -188,7 +177,7 @@ defineExpose({
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .input-wrapper,

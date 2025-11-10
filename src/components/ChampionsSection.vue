@@ -56,7 +56,7 @@ const props = defineProps({
   }
 })
 
-const DDRAGON_VERSION = '14.1.1' // Update this to latest version
+const DDRAGON_VERSION = '15.22.1' // Update this to latest version
 
 const getChampionImage = (championName) => {
   // Clean champion name (remove special characters, handle special cases)
@@ -68,7 +68,7 @@ const getChampionImage = (championName) => {
 
 const handleImageError = (event) => {
   // Fallback to a placeholder if image fails to load
-  event.target.src = 'https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/29.png'
+  event.target.src = 'https://ddragon.leagueoflegends.com/cdn/15.22.1/img/profileicon/29.png'
 }
 
 const formatChampionName = (name) => {

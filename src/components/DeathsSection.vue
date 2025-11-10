@@ -35,18 +35,7 @@
         </div>
       </div>
 
-      <div class="death-visual">
-        <div class="respawn-timer">
-          <div class="timer-circle">
-            <svg viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="45" class="timer-bg"></circle>
-              <circle cx="50" cy="50" r="45" class="timer-progress" :style="{ strokeDashoffset: deathCircleOffset }"></circle>
-            </svg>
-            <div class="timer-text">{{ (data.count_dead / data.time_dead * 100).toFixed(1) }}</div>
-          </div>
-          <p class="timer-label">Deaths per Hour</p>
-        </div>
-      </div>
+
     </div>
   </section>
 </template>

@@ -68,42 +68,30 @@ lol-wrapped/
 
 ## Connecting to Your Backend
 
-The app currently uses sample data embedded in `App.vue`. To connect to your backend API:
+The app is already configured to connect to your AWS API Gateway endpoint. The API integration is ready to use!
 
-### Option 1: Replace Sample Data
+### How It Works
 
-In `src/App.vue`, replace the `statsData` ref with an API call:
+1. User enters their **Summoner Name** and **Tag** (e.g., "Reive" and "EUW")
+2. App sends a POST request to your backend:
+   ```
+   POST https://xe653skfef.execute-api.eu-west-3.amazonaws.com/getWrapped
+   {
+     "name": "Reive",
+     "gametag": "EUW"
+   }
+   ```
+3. Backend returns player stats JSON
+4. App displays the Wrapped experience with animations
 
-```javascript
-import { ref, onMounted } from 'vue'
+### Configuration
 
-const statsData = ref(null)
-
-onMounted(async () => {
-  try {
-    const response = await fetch('YOUR_API_ENDPOINT')
-    statsData.value = await response.json()
-  } catch (error) {
-    console.error('Failed to fetch stats:', error)
-  }
-})
+The API endpoint is configured in `.env`:
+```env
+VITE_API_URL=https://xe653skfef.execute-api.eu-west-3.amazonaws.com
 ```
 
-### Option 2: Use Props (Recommended)
-
-Pass data from a parent component or router:
-
-```javascript
-// In App.vue
-const props = defineProps({
-  playerData: {
-    type: Object,
-    required: true
-  }
-})
-
-const statsData = ref(props.playerData)
-```
+To change the endpoint, update this file and restart the dev server.
 
 ### Expected Data Format
 

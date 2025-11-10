@@ -8,28 +8,28 @@
  */
 
 // Configure your backend API endpoint
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://xe653skfef.execute-api.eu-west-3.amazonaws.com'
 
 /**
  * Fetch player statistics from your backend
  * @param {string} summonerName - Summoner name
  * @param {string} tagLine - Tag line (e.g., 'EUW')
- * @param {string} region - Region (e.g., 'na1', 'euw1', 'kr')
- * @param {number} year - Year for stats (default: current year)
+ * @param {string} region - Region (optional, not currently used)
  * @returns {Promise<Object>} Player statistics
  */
-export async function fetchPlayerStats(summonerName, tagLine, region = 'euw1', year = new Date().getFullYear()) {
+export async function fetchPlayerStats(summonerName, tagLine, region = null) {
   try {
-    // Construct the full riot ID (summonerName#tagLine)
-    const riotId = `${summonerName}#${tagLine}`
-
     const response = await fetch(
-      `${API_BASE_URL}/stats/${encodeURIComponent(riotId)}?region=${region}&year=${year}`,
+      `${API_BASE_URL}/getWrapped`,
       {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          name: summonerName,
+          gametag: tagLine
+        })
       }
     )
 
@@ -39,9 +39,49 @@ export async function fetchPlayerStats(summonerName, tagLine, region = 'euw1', y
     }
 
     const data = await response.json()
-    return validateStatsData(data)
+
+    return validateStatsData(data.content)
   } catch (error) {
     console.error('Error fetching player stats:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch all games for a player
+ * @param {string} gameName - Game name
+ * @param {string} gameTag - Game tag (e.g., 'EUW')
+ * @param {string} region - Region (e.g., 'euw1')
+ * @returns {Promise<Array>} List of games
+ */
+export async function fetchAllGames(gameName, gameTag, region = 'euw1') {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/getAllGames`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          region: region.toLowerCase(),
+          gamename: gameName,
+          gametag: gameTag
+        })
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || `Failed to fetch games: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    // API returns { files: [...games] }
+    return data.files || []
+  } catch (error) {
+    console.error('Error fetching games:', error)
     throw error
   }
 }
@@ -82,7 +122,7 @@ export async function getLatestDataDragonVersion() {
     return versions[0] // First item is the latest version
   } catch (error) {
     console.error('Error fetching DataDragon version:', error)
-    return '14.1.1' // Fallback version
+    return '15.22.1' // Fallback version
   }
 }
 
@@ -92,7 +132,7 @@ export async function getLatestDataDragonVersion() {
  * @param {string} version - DataDragon version
  * @returns {string} Image URL
  */
-export function getChampionImageUrl(championName, version = '14.1.1') {
+export function getChampionImageUrl(championName, version = '15.22.1') {
   // Clean champion name (remove spaces, special characters)
   const cleanName = championName.replace(/[^a-zA-Z]/g, '')
   return `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${cleanName}.png`
@@ -120,6 +160,45 @@ export function formatDuration(seconds) {
 export function calculateWinRate(wins, losses) {
   const total = wins + losses
   return total > 0 ? wins / total : 0
+}
+
+/**
+ * Analyze a specific game
+ * @param {string} gameName - Game name
+ * @param {string} gameTag - Game tag (e.g., 'EUW')
+ * @param {string} region - Region (e.g., 'euw1')
+ * @param {string} gameId - Match ID
+ * @returns {Promise<Object>} Game analysis data
+ */
+export async function analyzeGame(gameName, gameTag, region, gameId) {
+  try {
+    const response = await fetch(
+      'https://eo5yg2jjm8.execute-api.eu-west-3.amazonaws.com/analyze',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          region: region.toLowerCase(),
+          gamename: gameName,
+          gametag: gameTag,
+          gameid: gameId
+        })
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || `Failed to analyze game: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error analyzing game:', error)
+    throw error
+  }
 }
 
 /**
