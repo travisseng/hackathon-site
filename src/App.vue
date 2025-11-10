@@ -50,7 +50,7 @@
         <section ref="heroSection" class="section hero-section">
           <div class="hero-content">
             <h1 class="hero-title">Your League of Legends</h1>
-            <h2 class="hero-subtitle gradient-text">2025 WRAPPED</h2>
+            <h2 class="hero-subtitle gradient-text">2025 RANKED WRAPPED</h2>
             <div class="scroll-indicator">
               <span>Scroll to reveal</span>
               <div class="scroll-arrow"></div>

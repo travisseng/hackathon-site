@@ -3,12 +3,12 @@
     <div class="input-content">
       <div class="logo-section">
         <h1 class="title gradient-text">League of Legends</h1>
-        <h2 class="subtitle">2025 WRAPPED</h2>
+        <h2 class="subtitle">YOUR YEAR</h2>
       </div>
 
       <div class="input-form">
         <h3 class="form-title">Enter Your Summoner Info</h3>
-        <p class="form-description">Discover your year in the Rift</p>
+        <p class="form-description">Discover your year in ranked in the Rift</p>
 
         <div class="input-group">
           <div class="input-wrapper">
@@ -52,7 +52,7 @@
           @click="handleSubmit"
           :disabled="!canSubmit || loading"
         >
-          <span v-if="!loading">Generate My Wrapped</span>
+          <span v-if="!loading">Generate My Analysis</span>
           <span v-else class="loading-text">
             <span class="spinner"></span>
             Loading...
