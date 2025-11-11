@@ -30,21 +30,74 @@ const chartCanvas = ref(null)
 let chartInstance = null
 
 const mostActiveMonth = computed(() => {
-  const entries = Object.entries(props.data)
+  const entries = Object.entries(props.data).filter(([_, games]) => games > 0)
+  if (entries.length === 0) return 'N/A'
+
   const maxEntry = entries.reduce((max, entry) => entry[1] > max[1] ? entry : max)
-  return maxEntry[0]
+  const date = new Date(maxEntry[0])
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  return `${monthNames[date.getMonth()]} ${date.getFullYear()}`
 })
 
 const mostActiveGames = computed(() => {
-  return Math.max(...Object.values(props.data))
+  const values = Object.values(props.data)
+  return values.length > 0 ? Math.max(...values) : 0
 })
 
 onMounted(() => {
   if (chartCanvas.value) {
     const ctx = chartCanvas.value.getContext('2d')
 
-    const labels = Object.keys(props.data)
-    const values = Object.values(props.data)
+    const parseMonthYear = (key) => {
+      if (!key) return null
+
+      // MM/YY or MM/YYYY
+      const slashMatch = key.match(/^(\d{1,2})\/(\d{2,4})$/)
+      if (slashMatch) {
+      const month = parseInt(slashMatch[1], 10) - 1
+      let year = parseInt(slashMatch[2], 10)
+      if (slashMatch[2].length === 2) year += 2000
+      return { year, month }
+      }
+
+      // ISO or JS-parsable date
+      const d = new Date(key)
+      if (!isNaN(d)) return { year: d.getFullYear(), month: d.getMonth() }
+
+      // Fallback for other formats like MM-YY, MM-YYYY, YYYY-MM
+      const parts = key.split(/[-_]/)
+      if (parts.length >= 2) {
+      // YYYY-MM or YYYY/MM
+      if (parts[0].length === 4) {
+        return { year: parseInt(parts[0], 10), month: parseInt(parts[1], 10) - 1 }
+      }
+      // MM-YY or MM-YYYY
+      let month = parseInt(parts[0], 10) - 1
+      let year = parseInt(parts[1], 10)
+      if (parts[1].length === 2) year += 2000
+      return { year, month }
+      }
+
+      return null
+    }
+
+    // Determine year from the first key (supports "MM/YY" like "05/25")
+    const firstKey = Object.keys(props.data)[0]
+    const parsedFirst = parseMonthYear(firstKey)
+    const year = parsedFirst ? parsedFirst.year : new Date().getFullYear()
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const labels = monthNames.map(month => `${month} ${year}`)
+
+    const values = monthNames.map((_, index) => {
+      for (const [key, value] of Object.entries(props.data)) {
+      const p = parseMonthYear(key)
+      if (p && p.year === year && p.month === index) {
+        return value
+      }
+      }
+      return 0
+    })
 
     chartInstance = new Chart(ctx, {
       type: 'bar',
@@ -97,7 +150,9 @@ onMounted(() => {
               font: {
                 size: 12,
                 weight: '600'
-              }
+              },
+              stepSize: 1,
+              precision: 0
             },
             grid: {
               color: 'rgba(200, 155, 60, 0.1)',
@@ -108,11 +163,12 @@ onMounted(() => {
             ticks: {
               color: '#c89b3c',
               font: {
-                size: 11,
+                size: 10,
                 weight: '600'
               },
               maxRotation: 45,
-              minRotation: 45
+              minRotation: 45,
+              autoSkip: false
             },
             grid: {
               display: false,

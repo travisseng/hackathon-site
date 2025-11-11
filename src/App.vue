@@ -80,7 +80,14 @@
         <ObjectivesSection ref="objectivesSection" :data="statsData.objectives" />
 
         <!-- Shareable Card Section -->
-        <ShareableCard v-if="statsData.synthese" :data="statsData" @reset="resetApp" />
+        <ShareableCard
+          v-if="statsData.synthese"
+          :data="statsData"
+          :account-data="accountData"
+          :summoner-name="summonerDetails.summonerName"
+          :summoner-tag="summonerDetails.tagLine"
+          @reset="resetApp"
+        />
       </template>
 
       <!-- Analysis Tab Content -->
@@ -104,7 +111,16 @@
 
         <!-- Game History or Analysis -->
         <template v-else>
-          <GameHistory v-if="!selectedGame" :games="gamesData" @analyze="handleAnalyzeGame" />
+          <GameHistory
+            v-if="!selectedGame"
+            :games="gamesData"
+            :game-tag="summonerDetails.tagLine"
+            :score-summaries="scoreSummaries"
+            :loading-scores="loadingScores"
+            @analyze="handleAnalyzeGame"
+            @update-score="handleScoreUpdate"
+            @update-loading="handleLoadingUpdate"
+          />
 
           <!-- Analysis Loading State -->
           <section v-else-if="analysisLoading" class="section analysis-section">
@@ -119,19 +135,45 @@
             <div class="analysis-message error">
               <span class="error-icon">⚠️</span>
               <p>{{ analysisError }}</p>
-              <button class="retry-btn" @click="handleAnalyzeGame(selectedGame)">Try Again</button>
+              <button class="retry-btn" @click="handleAnalyzeGame(selectedGame.matchId)">Try Again</button>
               <button class="back-btn" @click="handleBackToGames">Back to Games</button>
             </div>
           </section>
 
           <!-- Game Analysis -->
-          <GameAnalysis v-else-if="selectedGame && analysisData" :analysisData="analysisData" @back="handleBackToGames" />
+          <GameAnalysis v-else-if="selectedGame && analysisData" :analysisData="analysisData" :gameData="selectedGame" @back="handleBackToGames" />
         </template>
       </template>
 
       <!-- Monthly Progress Tab Content -->
       <template v-if="activeTab === 'monthly'">
-        <MonthlyProgressSection :data="monthlyData" />
+        <!-- Loading State -->
+        <section v-if="monthlyLoading" class="section monthly-section">
+          <div class="analysis-message">
+            <div class="loading-spinner"></div>
+            <p>Loading monthly progress...</p>
+          </div>
+        </section>
+
+        <!-- Error State -->
+        <section v-else-if="monthlyError" class="section monthly-section">
+          <div class="analysis-message error">
+            <span class="error-icon">⚠️</span>
+            <p>{{ monthlyError }}</p>
+            <button class="retry-btn" @click="fetchMonthly">Try Again</button>
+          </div>
+        </section>
+
+        <!-- Monthly Progress Data -->
+        <MonthlyProgressSection v-else-if="monthlyData.length > 0" :data="monthlyData" />
+
+        <!-- No Data State -->
+        <section v-else class="section monthly-section">
+          <div class="analysis-message">
+            <span class="error-icon">📊</span>
+            <p>No monthly progress data available</p>
+          </div>
+        </section>
       </template>
     </template>
   </div>
@@ -153,8 +195,7 @@ import ShareableCard from './components/ShareableCard.vue'
 import GameHistory from './components/GameHistory.vue'
 import GameAnalysis from './components/GameAnalysis.vue'
 import MonthlyProgressSection from './components/MonthlyProgressSection.vue'
-import { fetchPlayerStats, fetchAllGames, analyzeGame } from './utils/api'
-import monthlyData from '../monthly.json'
+import { fetchPlayerStats, fetchAllGames, analyzeGame, fetchMonthlyProgress, fetchAccountData } from './utils/api'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -167,10 +208,22 @@ const gamesData = ref([])
 const gamesLoading = ref(false)
 const gamesError = ref(null)
 
+// Score summaries cache
+const scoreSummaries = ref({})
+const loadingScores = ref({})
+
 // Analysis state
 const analysisData = ref(null)
 const analysisLoading = ref(false)
 const analysisError = ref(null)
+
+// Monthly progress state
+const monthlyData = ref([])
+const monthlyLoading = ref(false)
+const monthlyError = ref(null)
+
+// Account data state (rank, etc.)
+const accountData = ref(null)
 
 // Store summoner details for API calls
 const summonerDetails = ref({
@@ -227,6 +280,49 @@ const fetchGames = async () => {
   }
 }
 
+// Fetch monthly progress from API
+const fetchMonthly = async () => {
+  if (!summonerDetails.value.summonerName || monthlyData.value.length > 0) {
+    return // Don't fetch if no summoner or already fetched
+  }
+
+  monthlyLoading.value = true
+  monthlyError.value = null
+
+  try {
+    const data = await fetchMonthlyProgress(
+      summonerDetails.value.summonerName,
+      summonerDetails.value.tagLine
+    )
+
+    monthlyData.value = data
+  } catch (error) {
+    console.error('Error fetching monthly progress:', error)
+    monthlyError.value = error.message || 'Failed to fetch monthly progress'
+  } finally {
+    monthlyLoading.value = false
+  }
+}
+
+// Fetch account data (rank, profile icon, etc.)
+const fetchAccount = async () => {
+  if (!summonerDetails.value.summonerName || accountData.value) {
+    return // Don't fetch if no summoner or already fetched
+  }
+
+  try {
+    const data = await fetchAccountData(
+      summonerDetails.value.summonerName,
+      summonerDetails.value.tagLine
+    )
+
+    accountData.value = data
+  } catch (error) {
+    console.error('Error fetching account data:', error)
+    // Non-critical, so we don't show error to user
+  }
+}
+
 // API Handler Functions
 const handleFetchStats = async ({ summonerName, tagLine, region }) => {
   try {
@@ -240,8 +336,10 @@ const handleFetchStats = async ({ summonerName, tagLine, region }) => {
     await nextTick()
     initializeAnimations()
 
-    // Fetch games data in the background
+    // Fetch games, monthly data, and account data in the background
     fetchGames()
+    fetchMonthly()
+    fetchAccount()
   } catch (error) {
     const errorMessage = error.message || 'Failed to fetch player stats. Please check the summoner name and try again.'
     summonerInputRef.value?.setError(errorMessage)
@@ -257,6 +355,11 @@ const resetApp = () => {
   gamesError.value = null
   analysisData.value = null
   analysisError.value = null
+  monthlyData.value = []
+  monthlyError.value = null
+  scoreSummaries.value = {}
+  loadingScores.value = {}
+  accountData.value = null
   summonerDetails.value = { summonerName: '', tagLine: '', region: '' }
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -272,6 +375,11 @@ const switchTab = (tab) => {
     fetchGames()
   }
 
+  // Fetch monthly data when switching to monthly tab if not already loaded
+  if (tab === 'monthly' && monthlyData.value.length === 0 && !monthlyLoading.value) {
+    fetchMonthly()
+  }
+
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -283,7 +391,10 @@ const handleBackToGames = () => {
 }
 
 const handleAnalyzeGame = async (gameId) => {
-  selectedGame.value = gameId
+  // Find the full game object
+  const gameObject = gamesData.value.find(game => game.matchId === gameId)
+  selectedGame.value = gameObject
+
   analysisLoading.value = true
   analysisError.value = null
   analysisData.value = null
@@ -304,6 +415,16 @@ const handleAnalyzeGame = async (gameId) => {
   } finally {
     analysisLoading.value = false
   }
+}
+
+// Handle score summary updates from GameHistory
+const handleScoreUpdate = (matchId, scoreData) => {
+  scoreSummaries.value[matchId] = scoreData
+}
+
+// Handle loading state updates from GameHistory
+const handleLoadingUpdate = (matchId, isLoading) => {
+  loadingScores.value[matchId] = isLoading
 }
 
 // Mock analysis data (real data will come from API)
@@ -738,6 +859,11 @@ const finalSection = ref(null)
 /* Analysis Section Messages */
 .analysis-section {
   background: radial-gradient(circle at 50% 50%, rgba(3, 151, 171, 0.08) 0%, transparent 60%);
+}
+
+/* Monthly Section Messages */
+.monthly-section {
+  background: radial-gradient(circle at 50% 50%, rgba(200, 155, 60, 0.08) 0%, transparent 60%);
 }
 
 .analysis-message {

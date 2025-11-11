@@ -33,7 +33,7 @@
             :key="role"
             class="role-card"
           >
-            <div class="role-icon">{{ getRoleIcon(role) }}</div>
+            <div class="role-icon"><img :src="getRoleIcon(role)" alt="Role Icon" /></div>
             <div class="role-name">{{ formatRole(role) }}</div>
             <div class="role-bar">
               <div class="role-fill" :style="{ width: getRolePercentage(role, games) + '%' }"></div>
@@ -83,11 +83,11 @@ const getRankLabel = (index) => {
 
 const getRoleIcon = (role) => {
   const icons = {
-    'TOP': '⚔️',
-    'JUNGLE': '🌲',
-    'MIDDLE': '🔮',
-    'BOTTOM': '🏹',
-    'SUPPORT': '🛡️'
+    'TOP': 'https://wiki.leagueoflegends.com/en-us/images/Top_icon.png',
+    'JUNGLE': 'https://wiki.leagueoflegends.com/en-us/images/Jungle_icon.png',
+    'MIDDLE': 'https://wiki.leagueoflegends.com/en-us/images/Middle_icon.png',
+    'BOTTOM': 'https://wiki.leagueoflegends.com/en-us/images/Bottom_icon.png',
+    'SUPPORT': 'https://wiki.leagueoflegends.com/en-us/images/Support_icon.png'
   }
   return icons[role] || '❓'
 }
@@ -294,7 +294,7 @@ const getRolePercentage = (role, games) => {
 }
 
 .role-icon {
-  font-size: 2rem;
+  font-size: 1rem;
   margin-bottom: 0.5rem;
 }
 

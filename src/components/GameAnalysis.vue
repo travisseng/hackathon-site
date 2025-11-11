@@ -24,6 +24,48 @@
         </div>
       </div>
 
+      <!-- Game Stats -->
+      <div class="game-stats-overview" v-if="gameData">
+        <div class="stats-main">
+          <div class="stat-kda">
+            <div class="kda-numbers">{{ gameData.player.stats.Kills }}/{{ gameData.player.stats.Deaths }}/{{ gameData.player.stats.Assists }}</div>
+            <div class="kda-ratio">{{ calculateKDA(gameData.player.stats.Kills, gameData.player.stats.Deaths, gameData.player.stats.Assists) }} KDA</div>
+          </div>
+          <div class="stat-item-horizontal">
+            <span class="stat-icon">💰</span>
+            <span class="stat-value">{{ formatGold(gameData.player.stats.Gold) }}</span>
+          </div>
+          <div class="stat-item-horizontal">
+            <span class="stat-icon">🌾</span>
+            <span class="stat-value">{{ gameData.player.stats.CS }} CS ({{ calculateCSPerMin(gameData.player.stats.CS, gameData.duration) }}/min)</span>
+          </div>
+          <div class="stat-item-horizontal">
+            <span class="stat-icon">👁️</span>
+            <span class="stat-value">{{ gameData.player.stats['Vision Score'] }} Vision</span>
+          </div>
+        </div>
+
+        <!-- Opponent Stats (if available) -->
+        <div class="opponent-stats-overview" v-if="gameData.opponent">
+          <div class="opponent-header">
+            <span class="vs-label">VS</span>
+            <img :src="getChampionIcon(gameData.opponent.champion)" :alt="gameData.opponent.champion" class="opponent-icon-small" />
+            <div class="opponent-name-info">
+              <div class="opponent-name">{{ gameData.opponent.name }}</div>
+              <div class="opponent-champion">{{ gameData.opponent.champion }}</div>
+            </div>
+          </div>
+          <div class="opponent-kda" v-if="gameData.opponent.stats">
+            <span class="opponent-kda-numbers">{{ gameData.opponent.stats.Kills }}/{{ gameData.opponent.stats.Deaths }}/{{ gameData.opponent.stats.Assists }}</span>
+            <div class="opponent-mini-stats">
+              <span>💰 {{ formatGold(gameData.opponent.stats.Gold) }}</span>
+              <span>🌾 {{ gameData.opponent.stats.CS }}</span>
+              <span>👁️ {{ gameData.opponent.stats['Vision Score'] }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Phase Analysis -->
       <div class="section-header">
         <h2 class="section-title-analysis">Game Phase Analysis</h2>
@@ -124,7 +166,7 @@
         <div v-for="(action, idx) in analysisData.actionable_improvements" :key="idx" class="action-card" :class="'priority-' + action.priority.toLowerCase()">
           <div class="action-header">
             <span class="priority-badge">{{ action.priority }}</span>
-            <span class="impact-text">Impact: {{ action.impact.substring(0, 500) }}</span>
+            <!-- <span class="impact-text">Impact: {{ action.impact.substring(0, 500) }}</span> -->
           </div>
           <div class="action-content">{{ action.action }}</div>
         </div>
@@ -168,6 +210,10 @@ const props = defineProps({
   analysisData: {
     type: Object,
     required: true
+  },
+  gameData: {
+    type: Object,
+    required: true
   }
 })
 
@@ -198,6 +244,20 @@ const getRatingClass = (rating) => {
   if (rating >= 6) return 'rating-good'
   if (rating >= 4) return 'rating-average'
   return 'rating-poor'
+}
+
+const calculateKDA = (kills, deaths, assists) => {
+  if (deaths === 0) return 'Perfect'
+  return ((kills + assists) / deaths).toFixed(1)
+}
+
+const formatGold = (gold) => {
+  if (gold >= 1000) return `${(gold / 1000).toFixed(1)}k`
+  return gold.toString()
+}
+
+const calculateCSPerMin = (cs, duration) => {
+  return (cs / (duration / 60)).toFixed(1)
 }
 </script>
 
@@ -306,6 +366,143 @@ const getRatingClass = (rating) => {
   background: linear-gradient(90deg, var(--lol-gold), var(--lol-gold-light));
   border-radius: 10px;
   transition: width 0.5s ease;
+}
+
+/* Game Stats Overview */
+.game-stats-overview {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+  flex-wrap: wrap;
+}
+
+.stats-main {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(10, 20, 40, 0.6);
+  border: 2px solid rgba(200, 155, 60, 0.3);
+  border-radius: 15px;
+  flex-wrap: wrap;
+}
+
+.stat-kda {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem 1.2rem;
+  background: rgba(200, 155, 60, 0.1);
+  border-radius: 10px;
+  border: 2px solid var(--lol-gold);
+  min-width: 100px;
+}
+
+.kda-numbers {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: var(--lol-gold-light);
+  margin-bottom: 0.3rem;
+}
+
+.kda-ratio {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--lol-gold);
+}
+
+.stat-item-horizontal {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1rem;
+  background: rgba(10, 20, 40, 0.8);
+  border: 1px solid rgba(200, 155, 60, 0.2);
+  border-radius: 10px;
+  min-width: 120px;
+}
+
+.stat-icon {
+  font-size: 1.2rem;
+}
+
+.stat-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--lol-gold-light);
+}
+
+.opponent-stats-overview {
+  flex: 0 0 auto;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(255, 70, 85, 0.05);
+  border: 2px solid rgba(255, 70, 85, 0.3);
+  border-radius: 15px;
+}
+
+.opponent-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.vs-label {
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: #ff4655;
+  padding: 0.3rem 0.6rem;
+  background: rgba(255, 70, 85, 0.2);
+  border-radius: 5px;
+  border: 1px solid #ff4655;
+}
+
+.opponent-icon-small {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #ff4655;
+}
+
+.opponent-name-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.opponent-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--lol-gold-light);
+}
+
+.opponent-champion {
+  font-size: 0.75rem;
+  color: var(--lol-gold);
+}
+
+.opponent-kda {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.opponent-kda-numbers {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--lol-gold-light);
+}
+
+.opponent-mini-stats {
+  display: flex;
+  gap: 0.8rem;
+  font-size: 0.75rem;
+  color: var(--lol-gold-light);
+  opacity: 0.8;
 }
 
 /* Section Headers */
@@ -833,6 +1030,18 @@ const getRatingClass = (rating) => {
     flex-direction: column;
     gap: 2rem;
     text-align: center;
+  }
+
+  .game-stats-overview {
+    flex-direction: column;
+  }
+
+  .stats-main {
+    justify-content: center;
+  }
+
+  .opponent-stats-overview {
+    min-width: 100%;
   }
 }
 </style>

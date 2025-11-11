@@ -13,7 +13,7 @@
 
         <div class="stat-card">
           <div class="stat-icon">⏱️</div>
-          <div class="stat-value">{{ data.timespend_hh_mm_ss.split('day(s)')[0] + 'd ' + data.timespend_hh_mm_ss.split('hour(s)')[1].split('minute')[0] + 'h' }}</div>
+          <div class="stat-value">{{ formatTime(data.timespend) }}</div>
           <div class="stat-label">Total Time Played</div>
         </div>
 
@@ -45,6 +45,14 @@ defineProps({
     required: true
   }
 })
+
+const formatTime = (seconds) => {
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+  return `${days}d ${hours}h ${minutes}m ${secs}s`
+}
 
 const getWins = (victory) => {
   return victory.true || victory['true'] || 0

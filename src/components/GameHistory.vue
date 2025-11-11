@@ -6,7 +6,7 @@
 
       <div class="games-list">
         <div
-          v-for="game in displayGames"
+          v-for="game in paginatedGames"
           :key="game.matchId"
           class="game-card"
           :class="{ victory: game.player.win, defeat: !game.player.win }"
@@ -16,7 +16,7 @@
               <span class="result-text">{{ game.player.win ? 'Victory' : 'Defeat' }}</span>
               <span class="game-date">{{ formatGameDate(game.gameCreation) }}</span>
             </div>
-            <span class="game-duration">{{ formatDuration(game.duration_min) }}</span>
+            <span class="game-duration">{{ formatDuration(game.duration) }}</span>
           </div>
 
           <div class="game-content">
@@ -40,7 +40,7 @@
                 </div>
                 <div class="stat-item">
                   <span class="stat-icon">🌾</span>
-                  <span class="stat-value">{{ game.player.stats.CS }} CS ({{ calculateCSPerMin(game.player.stats.CS, game.duration_min) }}/min)</span>
+                  <span class="stat-value">{{ game.player.stats.CS }} CS ({{ calculateCSPerMin(game.player.stats.CS, game.duration) }}/min)</span>
                 </div>
                 <div class="stat-item">
                   <span class="stat-icon">👁️</span>
@@ -72,30 +72,105 @@
               </div>
             </div>
 
+            <!-- Score Summary Section -->
+            <div class="score-summary" v-if="props.scoreSummaries[game.matchId]">
+              <div v-if="props.loadingScores[game.matchId]" class="score-loading">
+                <span class="loading-spinner">⏳</span>
+                <span>Loading analysis...</span>
+              </div>
+
+              <div v-else-if="!props.scoreSummaries[game.matchId].error" class="score-content">
+                <div class="score-header">
+                  <div class="score-badge">
+                    <span class="score-label">Performance Score</span>
+                    <span class="score-value" :class="getScoreClass(props.scoreSummaries[game.matchId].score)">
+                      {{ props.scoreSummaries[game.matchId].score }}/10
+                    </span>
+                  </div>
+                </div>
+
+                <div class="score-summary-text">
+                  <p class="summary-label">Analysis Summary</p>
+                  <p class="summary-content">{{ props.scoreSummaries[game.matchId].summary }}</p>
+                </div>
+              </div>
+
+              <div v-else class="score-error">
+                <span class="error-icon">ℹ️</span>
+                <span>No analysis available for this match yet</span>
+              </div>
+            </div>
+
             <div class="game-actions">
               <button class="analyze-btn" @click="analyzeGame(game.matchId)">
                 <span class="btn-icon">📊</span>
-                Analyze Game
+                {{ props.scoreSummaries[game.matchId] && !props.scoreSummaries[game.matchId].error ? 'See Details' : 'Analyze Game' }}
               </button>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Pagination Controls -->
+      <div class="pagination" v-if="totalPages > 1">
+        <button
+          class="pagination-btn"
+          :disabled="currentPage === 1"
+          @click="prevPage"
+        >
+          <span>←</span>
+          <span class="btn-text">Previous</span>
+        </button>
+
+        <div class="pagination-info">
+          <span class="page-numbers">
+            Page <span class="current-page">{{ currentPage }}</span> of <span class="total-pages">{{ totalPages }}</span>
+          </span>
+          <span class="games-count">
+            Showing {{ (currentPage - 1) * gamesPerPage + 1 }}-{{ Math.min(currentPage * gamesPerPage, displayGames.length) }} of {{ displayGames.length }} games
+          </span>
+        </div>
+
+        <button
+          class="pagination-btn"
+          :disabled="currentPage === totalPages"
+          @click="nextPage"
+        >
+          <span class="btn-text">Next</span>
+          <span>→</span>
+        </button>
       </div>
     </div>
   </section>
 </template>
 
 <script setup>
-import { ref, computed, defineProps, defineEmits } from 'vue'
+import { ref, computed, defineProps, defineEmits, watch, onMounted } from 'vue'
 
 const props = defineProps({
   games: {
     type: Array,
     default: () => []
+  },
+  gameTag: {
+    type: String,
+    default: 'EUW'
+  },
+  scoreSummaries: {
+    type: Object,
+    default: () => ({})
+  },
+  loadingScores: {
+    type: Object,
+    default: () => ({})
   }
 })
 
-const emit = defineEmits(['analyze'])
+const emit = defineEmits(['analyze', 'update-score', 'update-loading'])
+
+// Pagination state
+const currentPage = ref(1)
+const gamesPerPage = 10
 
 // Mock data if no games provided
 const mockGames = [
@@ -184,6 +259,35 @@ const displayGames = computed(() => {
   return props.games.length > 0 ? props.games : mockGames
 })
 
+// Paginated games - only show games for current page
+const paginatedGames = computed(() => {
+  const startIndex = (currentPage.value - 1) * gamesPerPage
+  const endIndex = startIndex + gamesPerPage
+  return displayGames.value.slice(startIndex, endIndex)
+})
+
+// Total pages
+const totalPages = computed(() => {
+  return Math.ceil(displayGames.value.length / gamesPerPage)
+})
+
+// Pagination controls
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    // Scroll to top of game list
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
+const nextPage = () => {
+  goToPage(currentPage.value + 1)
+}
+
+const prevPage = () => {
+  goToPage(currentPage.value - 1)
+}
+
 const getChampionIcon = (championName) => {
   const cleanName = championName.replace(/[^a-zA-Z]/g, '')
   return `https://ddragon.leagueoflegends.com/cdn/15.22.1/img/champion/${cleanName}.png`
@@ -197,11 +301,13 @@ const calculateKDA = (kills, deaths, assists) => {
 }
 
 const calculateCSPerMin = (cs, duration) => {
-  return (cs / duration).toFixed(1)
+  return (cs / (duration / 60)).toFixed(1)
 }
 
-const formatDuration = (minutes) => {
-  return `${Math.floor(minutes)}:${String(Math.round((minutes % 1) * 60)).padStart(2, '0')}`
+const formatDuration = (seconds) => {
+  const minutes = Math.floor(seconds / 60)
+  seconds = seconds % 60
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
 const formatGold = (gold) => {
@@ -251,6 +357,79 @@ const getLaneFromContext = (game) => {
   }
   return 'Unknown'
 }
+
+// Get CSS class based on score value
+const getScoreClass = (score) => {
+  if (score >= 8) return 'score-excellent'
+  if (score >= 7) return 'score-good'
+  if (score >= 5) return 'score-average'
+  return 'score-poor'
+}
+
+// Fetch score summary for a specific match
+const fetchScoreSummary = async (matchId, gameName, gameTag) => {
+  if (!matchId || !gameName || !gameTag) return
+
+  // Skip if already loaded or loading
+  if (props.scoreSummaries[matchId] || props.loadingScores[matchId]) {
+    return
+  }
+
+  try {
+    emit('update-loading', matchId, true)
+    const url = `https://xe653skfef.execute-api.eu-west-3.amazonaws.com/getScoreSummary?gamename=${gameName}&gametag=${gameTag}&match_id=${matchId}`
+
+    const response = await fetch(url)
+    const data = await response.json()
+
+    if (data.error) {
+      emit('update-score', matchId, { error: true })
+    } else {
+      emit('update-score', matchId, {
+        score: data.score,
+        summary: data.summary,
+        error: false
+      })
+    }
+  } catch (error) {
+    console.error(`Error fetching score for ${matchId}:`, error)
+    emit('update-score', matchId, { error: true })
+  } finally {
+    emit('update-loading', matchId, false)
+  }
+}
+
+// Fetch score summaries only for the current page
+const fetchAllScoreSummaries = () => {
+  const gamesToFetch = paginatedGames.value
+  gamesToFetch.forEach(game => {
+    const gameName = game.player.name
+    fetchScoreSummary(game.matchId, gameName, props.gameTag)
+  })
+}
+
+// Watch for changes in current page and fetch scores for new page
+watch(currentPage, () => {
+  if (props.gameTag) {
+    fetchAllScoreSummaries()
+  }
+})
+
+// Watch for changes in games or gameTag
+watch([() => props.games, () => props.gameTag], () => {
+  if (props.games.length > 0 && props.gameTag) {
+    // Reset to page 1 when games change
+    currentPage.value = 1
+    fetchAllScoreSummaries()
+  }
+}, { immediate: false })
+
+// Fetch summaries on mount if using mock data or when real data is provided
+onMounted(() => {
+  if (displayGames.value.length > 0 && props.gameTag) {
+    fetchAllScoreSummaries()
+  }
+})
 
 const analyzeGame = (matchId) => {
   emit('analyze', matchId)
@@ -360,13 +539,17 @@ const analyzeGame = (matchId) => {
 
 .game-content {
   display: grid;
-  grid-template-columns: 200px 1fr 200px auto;
+  grid-template-columns: 200px 1fr 200px;
+  grid-template-areas:
+    "champion stats opponent"
+    "score score score"
+    "actions actions actions";
   gap: 1.5rem;
   padding: 1.5rem;
-  align-items: center;
 }
 
 .champion-info {
+  grid-area: champion;
   display: flex;
   gap: 1rem;
   align-items: center;
@@ -399,6 +582,7 @@ const analyzeGame = (matchId) => {
 }
 
 .game-stats {
+  grid-area: stats;
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
@@ -446,6 +630,7 @@ const analyzeGame = (matchId) => {
 
 /* Opponent Info */
 .opponent-info {
+  grid-area: opponent;
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
@@ -532,8 +717,142 @@ const analyzeGame = (matchId) => {
 }
 
 .game-actions {
+  grid-area: actions;
   display: flex;
   align-items: center;
+  justify-content: center;
+}
+
+/* Score Summary Styles */
+.score-summary {
+  grid-area: score;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.score-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba(3, 151, 171, 0.1);
+  border: 1px solid rgba(3, 151, 171, 0.3);
+  border-radius: 10px;
+  color: var(--lol-blue);
+  font-size: 0.9rem;
+}
+
+.loading-spinner {
+  font-size: 1.2rem;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.score-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(3, 151, 171, 0.08);
+  border: 1px solid rgba(3, 151, 171, 0.3);
+  border-radius: 10px;
+}
+
+.score-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.score-badge {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.score-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--lol-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.score-value {
+  font-size: 1.8rem;
+  font-weight: 900;
+  padding: 0.3rem 1rem;
+  border-radius: 8px;
+  background: rgba(10, 20, 40, 0.6);
+  border: 2px solid;
+}
+
+.score-excellent {
+  color: #00d4aa;
+  border-color: #00d4aa;
+  box-shadow: 0 0 15px rgba(0, 212, 170, 0.3);
+}
+
+.score-good {
+  color: #0ac8b9;
+  border-color: #0ac8b9;
+  box-shadow: 0 0 15px rgba(10, 200, 185, 0.3);
+}
+
+.score-average {
+  color: var(--lol-gold);
+  border-color: var(--lol-gold);
+  box-shadow: 0 0 15px rgba(200, 155, 60, 0.3);
+}
+
+.score-poor {
+  color: #ff4655;
+  border-color: #ff4655;
+  box-shadow: 0 0 15px rgba(255, 70, 85, 0.3);
+}
+
+.score-summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summary-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--lol-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.summary-content {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--lol-gold-light);
+  margin: 0;
+  text-align: justify;
+}
+
+.score-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: var(--lol-gold-light);
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+
+.error-icon {
+  font-size: 1.2rem;
 }
 
 .analyze-btn {
@@ -581,6 +900,12 @@ const analyzeGame = (matchId) => {
 
   .game-content {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "champion"
+      "stats"
+      "opponent"
+      "score"
+      "actions";
     gap: 1rem;
   }
 
@@ -618,5 +943,107 @@ const analyzeGame = (matchId) => {
   .stat-item {
     font-size: 0.8rem;
   }
+
+  .score-value {
+    font-size: 1.5rem;
+  }
+
+  .summary-content {
+    font-size: 0.85rem;
+    text-align: left;
+  }
+
+  .score-badge {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .pagination-info {
+    order: -1;
+    margin-bottom: 0.5rem;
+  }
+
+  .pagination-btn {
+    flex: 1;
+  }
+}
+
+/* Pagination Styles */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: rgba(10, 20, 40, 0.6);
+  border-radius: 15px;
+  border: 2px solid rgba(200, 155, 60, 0.2);
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  background: linear-gradient(135deg, var(--lol-gold), var(--lol-gold-light));
+  color: var(--lol-dark);
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(200, 155, 60, 0.4);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pagination-btn span:first-child,
+.pagination-btn span:last-child {
+  font-size: 1.2rem;
+}
+
+.pagination-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.page-numbers {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lol-gold-light);
+}
+
+.current-page {
+  color: var(--lol-gold);
+  font-size: 1.2rem;
+}
+
+.total-pages {
+  color: var(--lol-gold);
+}
+
+.games-count {
+  font-size: 0.85rem;
+  color: rgba(240, 230, 210, 0.7);
+  font-weight: 600;
 }
 </style>

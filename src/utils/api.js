@@ -194,9 +194,77 @@ export async function analyzeGame(gameName, gameTag, region, gameId) {
     }
 
     const data = await response.json()
+
+    // Check if the response contains an error field
+    if (data.error) {
+      throw new Error(data.error)
+    }
+
     return data
   } catch (error) {
     console.error('Error analyzing game:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch account data including rank information
+ * @param {string} gameName - Game name
+ * @param {string} gameTag - Game tag (e.g., 'EUW')
+ * @returns {Promise<Object>} Account data including rank
+ */
+export async function fetchAccountData(gameName, gameTag) {
+  try {
+    const response = await fetch(
+      `https://1xyj0oxw65.execute-api.eu-west-3.amazonaws.com/accountdata?gamename=${gameName}&gametag=${gameTag}`
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || `Failed to fetch account data: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    // Check if the response contains an error field
+    if (data.error) {
+      throw new Error(data.error)
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error fetching account data:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch monthly progress summary for a player
+ * @param {string} gameName - Game name
+ * @param {string} gameTag - Game tag (e.g., 'EUW')
+ * @returns {Promise<Array>} Monthly progress data
+ */
+export async function fetchMonthlyProgress(gameName, gameTag) {
+  try {
+    const response = await fetch(
+      `https://1xyj0oxw65.execute-api.eu-west-3.amazonaws.com/summary_year?gamename=${gameName}&gametag=${gameTag}`
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || `Failed to fetch monthly progress: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    // Check if the response contains an error field
+    if (data.error) {
+      throw new Error(data.error)
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error fetching monthly progress:', error)
     throw error
   }
 }

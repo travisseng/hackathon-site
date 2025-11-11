@@ -13,14 +13,14 @@
 
         <div class="stat-card">
           <div class="stat-icon">⏳</div>
-          <div class="stat-value">{{ formatTime(data.timespend_hh_mm_ss) }}</div>
+          <div class="stat-value">{{ formatTime(data.time_dead) }}</div>
           <div class="stat-label">Time Dead</div>
         </div>
 
         <div class="stat-card">
           <div class="stat-icon">⚰️</div>
           <div class="stat-value">{{ data.longest_death }}s</div>
-          <div class="stat-label">Longest Death</div>
+          <div class="stat-label">Most Time Spent Dead in a Single Game</div>
         </div>
       </div>
 
@@ -50,12 +50,11 @@ const props = defineProps({
   }
 })
 
-const formatTime = (timeStr) => {
-  const parts = timeStr.split('day(s)')
-  const days = parts[0].trim()
-  const rest = parts[1].split('hour(s)')
-  const hours = rest[0].trim()
-  return `${days}d ${hours}h`
+const formatTime = (seconds) => {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+  return `${hours}h ${minutes}m ${secs}s`
 }
 
 const deathCircleOffset = computed(() => {

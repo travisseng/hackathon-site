@@ -7,8 +7,15 @@
         <!-- HEADER -->
         <div class="card-header">
           <div class="header-content">
-            <div class="header-top">LEAGUE OF LEGENDS</div>
-            <div class="header-main">RANKED 2025 WRAPPED</div>
+            <div class="header-top">
+              <span class="header-game">LEAGUE OF LEGENDS</span>
+              <span class="header-divider">•</span>
+              <span class="header-year">2025 WRAPPED</span>
+            </div>
+            <div class="header-player" v-if="summonerName">
+              <span class="player-name">{{ summonerName }}</span>
+              <span class="player-tag">#{{ summonerTag }}</span>
+            </div>
           </div>
         </div>
 
@@ -35,6 +42,15 @@
 
         <!-- BOTTOM HALF: Stats -->
         <div class="stats-half">
+          <!-- Rank Display -->
+          <div class="rank-display" v-if="getRankData()">
+            <img :src="getRankImageUrl(getRankData().tier)" alt="Rank" class="rank-icon" />
+            <div class="rank-info">
+              <div class="rank-tier">{{ formatRank() }}</div>
+              <div class="rank-lp">{{ getRankData().lp }} LP</div>
+            </div>
+          </div>
+
           <!-- Role Badge - First -->
           <div class="role-display-compact">
             <img :src="getMostPlayedRoleIcon()" alt="Role Icon" class="role-icon-compact" />
@@ -142,11 +158,55 @@ const props = defineProps({
   data: {
     type: Object,
     required: true
+  },
+  accountData: {
+    type: Object,
+    default: null
+  },
+  summonerName: {
+    type: String,
+    default: ''
+  },
+  summonerTag: {
+    type: String,
+    default: ''
   }
 })
 
 const emit = defineEmits(['reset'])
 const cardRef = ref(null)
+
+// Get rank data from account data
+const getRankData = () => {
+  if (!props.accountData?.league_overview?.data?.queue_1) {
+    return null
+  }
+
+  const rankData = props.accountData.league_overview.data.queue_1
+  return {
+    tier: rankData.tier,
+    rank: rankData.rank,
+    lp: rankData.leaguePoints,
+    wins: rankData.wins,
+    losses: rankData.losses
+  }
+}
+
+// Get rank image URL (placeholder for now)
+const getRankImageUrl = (tier) => {
+  if (!tier) return '/ranks/unranked.png'
+
+  const tierLower = tier.toLowerCase()
+  return `/ranks/Rank=${tierLower}.png`
+}
+
+// Format rank display
+const formatRank = () => {
+  const rank = getRankData()
+  if (!rank) return 'Unranked'
+
+  return `${rank.tier} ${rank.rank}`
+}
 
 const formatChampionName = (name) => {
   return name.replace(/([A-Z])/g, ' $1').trim().toUpperCase()
@@ -343,7 +403,7 @@ const resetApp = () => {
   aspect-ratio: 9 / 16;
   max-width: 500px;
   margin: 0 auto;
-  border-radius: 30px;
+  border-radius: 25px;
   overflow: hidden;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8),
               0 0 60px rgba(200, 155, 60, 0.4);
@@ -353,35 +413,95 @@ const resetApp = () => {
 
 /* HEADER */
 .card-header {
-  background: linear-gradient(135deg, rgba(200, 155, 60, 0.95), rgba(200, 155, 60, 0.85));
-  padding: 1rem;
+  position: relative;
+  background: linear-gradient(135deg, rgba(200, 155, 60, 1), rgba(180, 135, 50, 0.95));
+  padding: 0.6rem 1rem;
   text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  border-bottom: 2px solid rgba(255, 215, 100, 0.5);
+}
+
+.card-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 2px,
+    rgba(255, 255, 255, 0.03) 2px,
+    rgba(255, 255, 255, 0.03) 4px
+  );
+  pointer-events: none;
 }
 
 .header-content {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.35rem;
 }
 
 .header-top {
-  font-size: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.5rem;
   font-weight: 700;
-  letter-spacing: 0.2em;
-  color: rgba(10, 20, 40, 0.8);
+  letter-spacing: 0.15em;
+  color: rgba(10, 20, 40, 0.7);
 }
 
-.header-main {
-  font-size: 1.3rem;
+.header-game {
+  opacity: 0.8;
+}
+
+.header-divider {
+  font-size: 0.4rem;
+  opacity: 0.6;
+}
+
+.header-year {
+  opacity: 0.8;
+}
+
+.header-player {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.8rem;
+  background: rgba(10, 20, 40, 0.15);
+  border-radius: 8px;
+  margin: 0 auto;
+  max-width: fit-content;
+  backdrop-filter: blur(5px);
+}
+
+.player-name {
+  font-size: 1.1rem;
   font-weight: 900;
-  letter-spacing: 0.1em;
   color: var(--lol-dark);
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+.player-tag {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(10, 20, 40, 0.8);
+  letter-spacing: 0.05em;
 }
 
 /* TOP HALF: Champions */
 .champions-half {
   position: relative;
-  flex: 1;
+  flex: 0.85;
   width: 100%;
   overflow: hidden;
 }
@@ -407,14 +527,14 @@ const resetApp = () => {
   left: 0;
   right: 0;
   background: linear-gradient(to top, rgba(10, 20, 40, 0.95), transparent);
-  padding: 1rem 0.8rem;
+  padding: 0.8rem 0.7rem;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
 }
 
 .champion-rank {
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 900;
   color: var(--lol-gold);
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
@@ -426,17 +546,17 @@ const resetApp = () => {
 }
 
 .champion-name {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 900;
   color: var(--lol-gold-light);
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
   letter-spacing: 0.05em;
   line-height: 1.1;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
 }
 
 .champion-games-count {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--lol-gold);
   font-weight: 700;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
@@ -444,12 +564,54 @@ const resetApp = () => {
 
 /* BOTTOM HALF: Stats */
 .stats-half {
-  flex: 1;
+  flex: 1.15;
   background: linear-gradient(to bottom, var(--lol-dark), rgba(10, 20, 40, 1));
-  padding: 1.2rem 1.5rem 1rem;
+  padding: 1rem 1.2rem 0.8rem;
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 0.6rem;
+}
+
+/* Rank Display */
+.rank-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(135deg, rgba(200, 155, 60, 0.3), rgba(200, 155, 60, 0.1));
+  border: 2px solid var(--lol-gold);
+  border-radius: 10px;
+}
+
+.rank-icon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(200, 155, 60, 0.5));
+}
+
+.rank-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+
+.rank-tier {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: var(--lol-gold);
+  letter-spacing: 0.05em;
+  text-transform: capitalize;
+  line-height: 1;
+}
+
+.rank-lp {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--lol-gold-light);
+  opacity: 0.9;
 }
 
 /* Compact Role Display */
@@ -457,22 +619,22 @@ const resetApp = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.7rem;
-  padding: 0.8rem 1.2rem;
+  gap: 0.6rem;
+  padding: 0.6rem 1rem;
   background: linear-gradient(135deg, rgba(200, 155, 60, 0.2), rgba(3, 151, 171, 0.1));
   border: 2px solid var(--lol-gold);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .role-icon-compact {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
   filter: brightness(1.2);
 }
 
 .role-text-compact {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 900;
   color: var(--lol-gold);
   letter-spacing: 0.1em;
@@ -482,28 +644,28 @@ const resetApp = () => {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .stat-box {
   background: rgba(10, 20, 40, 0.7);
   backdrop-filter: blur(20px);
   border: 2px solid rgba(200, 155, 60, 0.4);
-  border-radius: 15px;
-  padding: 1rem 0.5rem;
+  border-radius: 12px;
+  padding: 0.75rem 0.4rem;
   text-align: center;
 }
 
 .stat-number {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 900;
   color: var(--lol-gold);
   line-height: 1;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.25rem;
 }
 
 .stat-label {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   color: var(--lol-gold-light);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -515,7 +677,7 @@ const resetApp = () => {
 .performance-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.6rem;
+  gap: 0.4rem;
 }
 
 .stat-box.performance {
@@ -527,17 +689,17 @@ const resetApp = () => {
 .activity-chart {
   background: rgba(10, 20, 40, 0.7);
   backdrop-filter: blur(20px);
-  padding: 1rem 1.2rem;
-  border-radius: 15px;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
   border: 2px solid rgba(200, 155, 60, 0.3);
 }
 
 .chart-title {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: var(--lol-gold);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
   text-align: center;
   font-weight: 700;
 }
@@ -547,7 +709,7 @@ const resetApp = () => {
   align-items: flex-end;
   justify-content: space-between;
   gap: 0.15rem;
-  height: 45px;
+  height: 38px;
 }
 
 .bar-container {
@@ -560,7 +722,7 @@ const resetApp = () => {
 
 .bar-wrapper {
   width: 100%;
-  height: 35px;
+  height: 30px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -576,7 +738,7 @@ const resetApp = () => {
 }
 
 .bar-label {
-  font-size: 0.45rem;
+  font-size: 0.42rem;
   color: var(--lol-gold-light);
   text-transform: uppercase;
   opacity: 0.8;
@@ -588,7 +750,7 @@ const resetApp = () => {
 .secondary-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.6rem;
+  gap: 0.4rem;
 }
 
 .stat-box.secondary {
@@ -598,11 +760,11 @@ const resetApp = () => {
 /* Footer */
 .card-footer-story {
   text-align: center;
-  padding-top: 0.5rem;
+  padding-top: 0.3rem;
 }
 
 .footer-watermark {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   color: rgba(240, 230, 210, 0.5);
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -668,6 +830,22 @@ const resetApp = () => {
     border-radius: 20px;
   }
 
+  .card-header {
+    padding: 0.5rem 0.8rem;
+  }
+
+  .header-top {
+    font-size: 0.45rem;
+  }
+
+  .player-name {
+    font-size: 1rem;
+  }
+
+  .player-tag {
+    font-size: 0.75rem;
+  }
+
   .champion-name {
     font-size: 0.85rem;
   }
@@ -677,12 +855,16 @@ const resetApp = () => {
   }
 
   .stat-number {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
   }
 
-  .role-badge-story {
-    padding: 0.7rem 1.2rem;
-    font-size: 0.8rem;
+  .stat-label {
+    font-size: 0.5rem;
+  }
+
+  .rank-display,
+  .role-display-compact {
+    padding: 0.5rem 0.8rem;
   }
 
   .share-buttons {

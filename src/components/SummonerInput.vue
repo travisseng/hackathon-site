@@ -36,16 +36,35 @@
           </div>
         </div>
 
-        <!-- Region selector hidden for now - not currently used by API -->
-        <!-- <div class="region-select">
+        <div class="region-select">
           <label for="region">Region</label>
           <select id="region" v-model="region" :disabled="loading">
-            <option value="euw1">Europe West</option>
-            <option value="na1">North America</option>
-            <option value="eun1">Europe Nordic & East</option>
-            <option value="kr">Korea</option>
+            <optgroup label="Americas">
+              <option value="na1">North America</option>
+              <option value="br1">Brazil</option>
+              <option value="la1">Latin America North</option>
+              <option value="la2">Latin America South</option>
+            </optgroup>
+            <optgroup label="Europe">
+              <option value="euw1">Europe West</option>
+              <option value="eun1">Europe Nordic & East</option>
+              <option value="tr1">Turkey</option>
+              <option value="ru">Russia</option>
+            </optgroup>
+            <optgroup label="Asia">
+              <option value="kr">Korea</option>
+              <option value="jp1">Japan</option>
+            </optgroup>
+            <optgroup label="Southeast Asia">
+              <option value="oc1">Oceania</option>
+              <option value="ph2">Philippines</option>
+              <option value="sg2">Singapore</option>
+              <option value="th2">Thailand</option>
+              <option value="tw2">Taiwan</option>
+              <option value="vn2">Vietnam</option>
+            </optgroup>
           </select>
-        </div> -->
+        </div>
 
         <button
           class="submit-button"
@@ -59,6 +78,13 @@
           </span>
         </button>
 
+        <div v-if="loading && progress > 0" class="progress-container">
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: progress + '%' }"></div>
+          </div>
+          <p class="progress-text">{{ progressMessage }}</p>
+        </div>
+
         <p v-if="error" class="error-message">{{ error }}</p>
 
         <p class="privacy-note">
@@ -70,31 +96,117 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 
 const emit = defineEmits(['submit'])
 
 const summonerName = ref('')
 const tagLine = ref('')
-const region = ref('euw1')
+const region = ref('na1')
 const loading = ref(false)
 const error = ref('')
+const progress = ref(0)
+const progressMessage = ref('')
+
+let ws = null
+
+// Map server regions to routing values
+const regionToRouting = {
+  'na1': 'americas',
+  'br1': 'americas',
+  'la1': 'americas',
+  'la2': 'americas',
+  'euw1': 'europe',
+  'eun1': 'europe',
+  'tr1': 'europe',
+  'ru': 'europe',
+  'kr': 'asia',
+  'jp1': 'asia',
+  'oc1': 'sea',
+  'ph2': 'sea',
+  'sg2': 'sea',
+  'th2': 'sea',
+  'tw2': 'sea',
+  'vn2': 'sea'
+}
 
 const canSubmit = computed(() => {
   return summonerName.value.trim() && tagLine.value.trim()
 })
 
-const handleSubmit = () => {
+const connectWebSocket = () => {
+  return new Promise((resolve, reject) => {
+    ws = new WebSocket("wss://v19yst44bk.execute-api.eu-west-3.amazonaws.com/production")
+
+    ws.onopen = () => {
+      console.log("WebSocket connected")
+      // Send a message to start processing
+      ws.send(JSON.stringify({
+        action: "process",
+        region: region.value,
+        gamename: summonerName.value.trim(),
+        gametag: tagLine.value.trim()
+      }))
+    }
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+
+      if (data.type === 'progress') {
+        progress.value = data.progress
+        progressMessage.value = data.message
+      } else if (data.type === 'complete') {
+        progress.value = 100
+        progressMessage.value = data.message
+        ws.close()
+        resolve()
+      } else if (data.type === 'error') {
+        reject(new Error(data.message || 'An error occurred'))
+      }
+    }
+
+    ws.onerror = (err) => {
+      console.error("WebSocket error:", err)
+      reject(new Error('WebSocket connection error'))
+    }
+
+    ws.onclose = () => {
+      console.log("WebSocket disconnected")
+    }
+  })
+}
+
+const handleSubmit = async () => {
   if (!canSubmit.value || loading.value) return
 
   error.value = ''
   loading.value = true
+  progress.value = 0
+  progressMessage.value = 'Connecting...'
 
-  emit('submit', {
-    summonerName: summonerName.value.trim(),
-    tagLine: tagLine.value.trim(),
-    region: region.value
-  })
+  try {
+    // Connect to WebSocket and wait for processing to complete
+    await connectWebSocket()
+
+    // Once complete, emit the submit event to fetch the final data
+    emit('submit', {
+      summonerName: summonerName.value.trim(),
+      tagLine: tagLine.value.trim(),
+      region: region.value,
+      routingRegion: regionToRouting[region.value]
+    })
+  } catch (err) {
+    error.value = err.message || 'Failed to process matches. Please try again.'
+    loading.value = false
+    progress.value = 0
+    progressMessage.value = ''
+
+    // Clean up WebSocket connection if it exists
+    if (ws) {
+      ws.close()
+      ws = null
+    }
+  }
 }
 
 const setLoading = (value) => {
@@ -104,7 +216,17 @@ const setLoading = (value) => {
 const setError = (message) => {
   error.value = message
   loading.value = false
+  progress.value = 0
+  progressMessage.value = ''
 }
+
+// Clean up WebSocket on component unmount
+onUnmounted(() => {
+  if (ws) {
+    ws.close()
+    ws = null
+  }
+})
 
 defineExpose({
   setLoading,
@@ -274,6 +396,34 @@ select:disabled {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.progress-container {
+  margin-top: 1.5rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(10, 20, 40, 0.6);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(200, 155, 60, 0.3);
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--lol-gold), var(--lol-gold-light));
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px rgba(200, 155, 60, 0.5);
+}
+
+.progress-text {
+  margin-top: 0.5rem;
+  color: var(--lol-gold-light);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
 }
 
 .error-message {

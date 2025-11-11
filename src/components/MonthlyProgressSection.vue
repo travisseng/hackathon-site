@@ -153,12 +153,43 @@ const topChampions = computed(() => {
     .slice(0, 10)
 })
 
-// Get data for selected champion
+// Get data for selected champion, merging entries from different roles in the same month
 const selectedChampionData = computed(() => {
   if (!selectedChampion.value) return []
 
-  return props.data
-    .filter(entry => entry.champion === selectedChampion.value)
+  // Filter entries for selected champion
+  const championEntries = props.data.filter(entry => entry.champion === selectedChampion.value)
+
+  // Group by year-month key, merging different roles
+  const monthlyMap = new Map()
+
+  championEntries.forEach(entry => {
+    const key = `${entry.year}-${entry.month_number}`
+    const existing = monthlyMap.get(key)
+
+    if (existing) {
+      // Merge data from different roles in the same month
+      const totalGames = existing.games + entry.games
+
+      // Weighted averages based on number of games
+      existing.games = totalGames
+      existing.winrate = ((existing.winrate * existing.totalGamesForAvg) + (entry.winrate * entry.games)) / totalGames
+      existing.avg_kda = ((existing.avg_kda * existing.totalGamesForAvg) + (entry.avg_kda * entry.games)) / totalGames
+      existing.avg_dmg_to_champs = ((existing.avg_dmg_to_champs * existing.totalGamesForAvg) + (entry.avg_dmg_to_champs * entry.games)) / totalGames
+      existing.avg_cs_per_min = ((existing.avg_cs_per_min * existing.totalGamesForAvg) + (entry.avg_cs_per_min * entry.games)) / totalGames
+      existing.avg_vision_score = ((existing.avg_vision_score * existing.totalGamesForAvg) + (entry.avg_vision_score * entry.games)) / totalGames
+      existing.totalGamesForAvg = totalGames
+    } else {
+      // First entry for this month
+      monthlyMap.set(key, {
+        ...entry,
+        totalGamesForAvg: entry.games // Track for weighted average calculations
+      })
+    }
+  })
+
+  // Convert map to array and sort by date
+  return Array.from(monthlyMap.values())
     .sort((a, b) => {
       if (a.year !== b.year) return a.year - b.year
       return a.month_number - b.month_number
