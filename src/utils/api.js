@@ -52,9 +52,10 @@ export async function fetchPlayerStats(summonerName, tagLine, region = null) {
  * @param {string} gameName - Game name
  * @param {string} gameTag - Game tag (e.g., 'EUW')
  * @param {string} region - Region (e.g., 'euw1')
+ * @param {string|null} puuid - Player UUID (optional)
  * @returns {Promise<Array>} List of games
  */
-export async function fetchAllGames(gameName, gameTag, region = 'euw1') {
+export async function fetchAllGames(gameName, gameTag, region = 'euw1', puuid = null) {
   try {
     const response = await fetch(
       `${API_BASE_URL}/getAllGames`,
@@ -66,7 +67,8 @@ export async function fetchAllGames(gameName, gameTag, region = 'euw1') {
         body: JSON.stringify({
           region: region.toLowerCase(),
           gamename: gameName,
-          gametag: gameTag
+          gametag: gameTag,
+          puuid: puuid
         })
       }
     )

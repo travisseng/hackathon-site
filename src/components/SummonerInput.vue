@@ -66,6 +66,15 @@
           </select>
         </div>
 
+        <div class="ranked-type-select">
+          <label for="rankedType">Queue Type</label>
+          <select id="rankedType" v-model="rankedType" :disabled="loading">
+            <option value="solo">Solo/Duo Queue</option>
+            <option value="flex">Flex Queue</option>
+            <option value="solo_and_flex">Both Queues</option>
+          </select>
+        </div>
+
         <button
           class="submit-button"
           @click="handleSubmit"
@@ -78,7 +87,8 @@
           </span>
         </button>
 
-        <div v-if="loading && progress > 0" class="progress-container">
+        <div v-if="loading" class="progress-container">
+          <p v-if="funnyMessage" class="funny-message">{{ funnyMessage }}</p>
           <div class="progress-bar">
             <div class="progress-fill" :style="{ width: progress + '%' }"></div>
           </div>
@@ -103,12 +113,73 @@ const emit = defineEmits(['submit'])
 const summonerName = ref('')
 const tagLine = ref('')
 const region = ref('na1')
+const rankedType = ref('solo')
 const loading = ref(false)
 const error = ref('')
 const progress = ref(0)
 const progressMessage = ref('')
+const funnyMessage = ref('')
 
 let ws = null
+let funnyMessageInterval = null
+
+// Funny League of Legends themed loading messages
+const funnyLoadingMessages = [
+  "Summoning the Rift Scuttler for data...",
+  "Asking Teemo for your match history...",
+  "Diving into the Nexus database...",
+  "Checking if you bought boots...",
+  "Calculating your Flash key placement...",
+  "Consulting with the Ancient Rift Historians...",
+  "Analyzing your ping excuse validity...",
+  "Reviewing your 'my team held me back' claims...",
+  "Counting how many times you died to red buff...",
+  "Checking if you ever thanked your support...",
+  "Analyzing your 'top diff' frequency...",
+  "Summoning Baron to review your smite timings...",
+  "Asking Ryze for another rework... I mean your stats...",
+  "Checking if you ever played for objectives...",
+  "Analyzing your 'JG diff' spam patterns...",
+  "Reviewing your mastery 7 flex moments...",
+  "Calculating your rage quit probability per game...",
+  "Checking if you ever roamed as mid laner...",
+  "Analyzing your ability to CS under tower...",
+  "Reviewing your 'I'm smurfing' claims...",
+  "Checking how many pentas you stole...",
+  "Calculating times you blamed lag...",
+  "Analyzing your 'worth' moments... they weren't...",
+  "Checking if you ever placed a pink ward...",
+  "Reviewing your Yasuo 0/10 powerspike data...",
+  "Calculating your 'better jungle wins' ratio...",
+  "Analyzing your champion puddle depth...",
+  "Checking if you ever used the mute button...",
+  "Reviewing your 'just one more game' decisions...",
+  "Calculating your tilt trajectory across seasons..."
+]
+
+// Rotate funny messages during loading
+const startFunnyMessageRotation = () => {
+  // Set initial random message
+  funnyMessage.value = funnyLoadingMessages[Math.floor(Math.random() * funnyLoadingMessages.length)]
+
+  // Rotate messages every 2.5 seconds
+  funnyMessageInterval = setInterval(() => {
+    if (!loading.value) {
+      clearInterval(funnyMessageInterval)
+      funnyMessageInterval = null
+      return
+    }
+    funnyMessage.value = funnyLoadingMessages[Math.floor(Math.random() * funnyLoadingMessages.length)]
+  }, 2500)
+}
+
+const stopFunnyMessageRotation = () => {
+  if (funnyMessageInterval) {
+    clearInterval(funnyMessageInterval)
+    funnyMessageInterval = null
+  }
+  funnyMessage.value = ''
+}
 
 // Map server regions to routing values
 const regionToRouting = {
@@ -145,7 +216,8 @@ const connectWebSocket = () => {
         action: "process",
         region: region.value,
         gamename: summonerName.value.trim(),
-        gametag: tagLine.value.trim()
+        gametag: tagLine.value.trim(),
+        ranked_type: rankedType.value
       }))
     }
 
@@ -159,7 +231,13 @@ const connectWebSocket = () => {
         progress.value = 100
         progressMessage.value = data.message
         ws.close()
-        resolve()
+        // Resolve with the returned data from the backend
+        resolve({
+          region: data.region,
+          gamename: data.gamename,
+          tag: data.tag,
+          puuid: data.puuid
+        })
       } else if (data.type === 'error') {
         reject(new Error(data.message || 'An error occurred'))
       }
@@ -184,22 +262,28 @@ const handleSubmit = async () => {
   progress.value = 0
   progressMessage.value = 'Connecting...'
 
+  // Start funny message rotation
+  startFunnyMessageRotation()
+
   try {
     // Connect to WebSocket and wait for processing to complete
-    await connectWebSocket()
+    const result = await connectWebSocket()
 
-    // Once complete, emit the submit event to fetch the final data
+    // Once complete, emit the submit event with the returned data from the backend
     emit('submit', {
-      summonerName: summonerName.value.trim(),
-      tagLine: tagLine.value.trim(),
-      region: region.value,
-      routingRegion: regionToRouting[region.value]
+      summonerName: result.gamename,
+      tagLine: result.tag,
+      region: result.region,
+      routingRegion: regionToRouting[result.region],
+      rankedType: rankedType.value,
+      puuid: result.puuid
     })
   } catch (err) {
     error.value = err.message || 'Failed to process matches. Please try again.'
     loading.value = false
     progress.value = 0
     progressMessage.value = ''
+    stopFunnyMessageRotation()
 
     // Clean up WebSocket connection if it exists
     if (ws) {
@@ -211,6 +295,9 @@ const handleSubmit = async () => {
 
 const setLoading = (value) => {
   loading.value = value
+  if (!value) {
+    stopFunnyMessageRotation()
+  }
 }
 
 const setError = (message) => {
@@ -218,6 +305,7 @@ const setError = (message) => {
   loading.value = false
   progress.value = 0
   progressMessage.value = ''
+  stopFunnyMessageRotation()
 }
 
 // Clean up WebSocket on component unmount
@@ -226,6 +314,7 @@ onUnmounted(() => {
     ws.close()
     ws = null
   }
+  stopFunnyMessageRotation()
 })
 
 defineExpose({
@@ -347,7 +436,8 @@ select:disabled {
   cursor: not-allowed;
 }
 
-.region-select {
+.region-select,
+.ranked-type-select {
   margin-bottom: 2rem;
 }
 
@@ -400,6 +490,26 @@ select:disabled {
 
 .progress-container {
   margin-top: 1.5rem;
+}
+
+.funny-message {
+  margin-bottom: 1rem;
+  color: var(--lol-gold);
+  font-size: 1rem;
+  font-weight: 600;
+  font-style: italic;
+  text-align: center;
+  animation: fadeInOut 2.5s ease-in-out infinite;
+  min-height: 1.5em;
+}
+
+@keyframes fadeInOut {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .progress-bar {

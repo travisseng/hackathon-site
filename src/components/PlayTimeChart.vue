@@ -26,29 +26,7 @@ const props = defineProps({
   }
 })
 
-const chartCanvas = ref(null)
-let chartInstance = null
-
-const mostActiveMonth = computed(() => {
-  const entries = Object.entries(props.data).filter(([_, games]) => games > 0)
-  if (entries.length === 0) return 'N/A'
-
-  const maxEntry = entries.reduce((max, entry) => entry[1] > max[1] ? entry : max)
-  const date = new Date(maxEntry[0])
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-  return `${monthNames[date.getMonth()]} ${date.getFullYear()}`
-})
-
-const mostActiveGames = computed(() => {
-  const values = Object.values(props.data)
-  return values.length > 0 ? Math.max(...values) : 0
-})
-
-onMounted(() => {
-  if (chartCanvas.value) {
-    const ctx = chartCanvas.value.getContext('2d')
-
-    const parseMonthYear = (key) => {
+const parseMonthYear = (key) => {
       if (!key) return null
 
       // MM/YY or MM/YYYY
@@ -80,6 +58,31 @@ onMounted(() => {
 
       return null
     }
+
+const chartCanvas = ref(null)
+let chartInstance = null
+
+const mostActiveMonth = computed(() => {
+  const entries = Object.entries(props.data).filter(([_, games]) => games > 0)
+  if (entries.length === 0) return 'N/A'
+
+  const maxEntry = entries.reduce((max, entry) => entry[1] > max[1] ? entry : max)
+  const date = parseMonthYear(maxEntry[0])
+  if (!date) return 'N/A'
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  return `${monthNames[date.month]} ${date.year}`
+})
+
+const mostActiveGames = computed(() => {
+  const values = Object.values(props.data)
+  return values.length > 0 ? Math.max(...values) : 0
+})
+
+onMounted(() => {
+  if (chartCanvas.value) {
+    const ctx = chartCanvas.value.getContext('2d')
+
+    
 
     // Determine year from the first key (supports "MM/YY" like "05/25")
     const firstKey = Object.keys(props.data)[0]

@@ -181,14 +181,31 @@ const getRankData = () => {
   if (!props.accountData?.league_overview?.data?.queue_1) {
     return null
   }
-
-  const rankData = props.accountData.league_overview.data.queue_1
-  return {
-    tier: rankData.tier,
-    rank: rankData.rank,
-    lp: rankData.leaguePoints,
-    wins: rankData.wins,
-    losses: rankData.losses
+  // get keys in league_overview.data
+  const keys = Object.keys(props.accountData.league_overview.data)
+  // iterate to find queue RANKED_SOLO_5x5 or equivalent
+  for (const key of keys) {
+    const queueData = props.accountData.league_overview.data[key]
+    if (queueData.queueType === 'RANKED_SOLO_5x5') {
+      return {
+        tier: queueData.tier,
+        rank: queueData.rank,
+        lp: queueData.leaguePoints,
+        wins: queueData.wins,
+        losses: queueData.losses
+      }
+    }
+  }
+  // Fallback to queue_1 if specific queue not found
+  if (keys.length > 0) {
+    const fallbackData = props.accountData.league_overview.data[keys[0]]
+    return {
+      tier: fallbackData.tier,
+      rank: fallbackData.rank,
+      lp: fallbackData.leaguePoints,
+      wins: fallbackData.wins,
+      losses: fallbackData.losses
+    }
   }
 }
 
@@ -258,7 +275,7 @@ const getMostPlayedRole = () => {
     'JUNGLE': 'Jungle',
     'MIDDLE': 'Mid',
     'BOTTOM': 'ADC',
-    'SUPPORT': 'Support'
+    'UTILITY': 'Support'
   }
 
   return roleNames[role] || role
@@ -276,7 +293,7 @@ const getMostPlayedRoleIcon = () => {
     'JUNGLE': 'https://wiki.leagueoflegends.com/en-us/images/Jungle_icon.png',
     'MIDDLE': 'https://wiki.leagueoflegends.com/en-us/images/Middle_icon.png',
     'BOTTOM': 'https://wiki.leagueoflegends.com/en-us/images/Bottom_icon.png',
-    'SUPPORT': 'https://wiki.leagueoflegends.com/en-us/images/Support_icon.png'
+    'UTILITY': 'https://wiki.leagueoflegends.com/en-us/images/Support_icon.png'
   }
   return iconUrls[role] || 'https://wiki.leagueoflegends.com/en-us/images/Middle_icon.png'
 }

@@ -126,7 +126,7 @@
           <section v-else-if="analysisLoading" class="section analysis-section">
             <div class="analysis-message">
               <div class="loading-spinner"></div>
-              <p>Analyzing game...</p>
+              <p class="loading-text">{{ analysisLoadingMessage }}</p>
             </div>
           </section>
 
@@ -216,6 +216,60 @@ const loadingScores = ref({})
 const analysisData = ref(null)
 const analysisLoading = ref(false)
 const analysisError = ref(null)
+const analysisLoadingMessage = ref('')
+
+// Funny League of Legends themed loading messages
+const loadingMessages = [
+  "Calculating your int score...",
+  "Summoning Faker's ghost for analysis...",
+  "Blaming the jungler...",
+  "Checking if you actually warded...",
+  "Analyzing Flash usage... why didn't you Flash?",
+  "Questioning your build choices...",
+  "Reviewing your ? ping frequency...",
+  "Calculating LP loss... probably -18",
+  "Checking respawn timers... you were grey a lot",
+  "Analyzing all-chat messages... oh no",
+  "Detecting face-checking bushes...",
+  "Counting times you chased Singed...",
+  "Checking if you honored your support...",
+  "Analyzing CS per minute... yikes",
+  "Reviewing your ult usage... or lack thereof",
+  "Calculating toxicity levels in chat...",
+  "Checking if you invaded without vision...",
+  "Analyzing your 0/10 powerspike timing...",
+  "Detecting rage quit probability...",
+  "Checking if you took Gromp from your jungler...",
+  "Analyzing whether you greeted your team...",
+  "Counting your missed skill shots...",
+  "Reviewing your mastery 7 emote spam...",
+  "Checking if you helped your jungler with scuttle...",
+  "Analyzing your ability to dodge skill shots...",
+  "Calculating how many objectives you slept through...",
+  "Checking if you pinged 'enemy missing'... you didn't",
+  "Analyzing your klepto addiction...",
+  "Reviewing your attempt to 1v5...",
+  "Checking if you bought control wards... narrator: they didn't"
+]
+
+// Randomly select and rotate loading messages
+const startLoadingMessageRotation = () => {
+  // Set initial random message
+  analysisLoadingMessage.value = loadingMessages[Math.floor(Math.random() * loadingMessages.length)]
+
+  // Rotate messages every 2.5 seconds
+  const interval = setInterval(() => {
+    if (!analysisLoading.value) {
+      clearInterval(interval)
+      return
+    }
+    analysisLoadingMessage.value = loadingMessages[Math.floor(Math.random() * loadingMessages.length)]
+  }, 2500)
+
+  return interval
+}
+
+let loadingMessageInterval = null
 
 // Monthly progress state
 const monthlyData = ref([])
@@ -229,7 +283,8 @@ const accountData = ref(null)
 const summonerDetails = ref({
   summonerName: '',
   tagLine: '',
-  region: ''
+  region: '',
+  puuid: ''
 })
 
 // Helper function to sort amount_played_year chronologically
@@ -261,7 +316,8 @@ const fetchGames = async () => {
     const games = await fetchAllGames(
       summonerDetails.value.summonerName,
       summonerDetails.value.tagLine,
-      summonerDetails.value.region
+      summonerDetails.value.region,
+      summonerDetails.value.puuid
     )
 
     // Sort games by gameCreation timestamp (most recent first)
@@ -324,13 +380,13 @@ const fetchAccount = async () => {
 }
 
 // API Handler Functions
-const handleFetchStats = async ({ summonerName, tagLine, region }) => {
+const handleFetchStats = async ({ summonerName, tagLine, region, puuid }) => {
   try {
     const data = await fetchPlayerStats(summonerName, tagLine, region)
     statsData.value = data
 
     // Store summoner details for future API calls
-    summonerDetails.value = { summonerName, tagLine, region }
+    summonerDetails.value = { summonerName, tagLine, region, puuid }
 
     // Wait for DOM update, then initialize animations
     await nextTick()
@@ -360,7 +416,7 @@ const resetApp = () => {
   scoreSummaries.value = {}
   loadingScores.value = {}
   accountData.value = null
-  summonerDetails.value = { summonerName: '', tagLine: '', region: '' }
+  summonerDetails.value = { summonerName: '', tagLine: '', region: '', puuid: '' }
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -399,6 +455,9 @@ const handleAnalyzeGame = async (gameId) => {
   analysisError.value = null
   analysisData.value = null
 
+  // Start rotating funny loading messages
+  loadingMessageInterval = startLoadingMessageRotation()
+
   window.scrollTo({ top: 0, behavior: 'smooth' })
 
   try {
@@ -423,6 +482,11 @@ const handleAnalyzeGame = async (gameId) => {
     analysisError.value = error.message || 'Failed to analyze game'
   } finally {
     analysisLoading.value = false
+    // Clear the loading message interval
+    if (loadingMessageInterval) {
+      clearInterval(loadingMessageInterval)
+      loadingMessageInterval = null
+    }
   }
 }
 
@@ -887,6 +951,21 @@ const finalSection = ref(null)
 .analysis-message p {
   font-size: 1.2rem;
   color: var(--lol-gold-light);
+}
+
+/* Loading text animation */
+.loading-text {
+  animation: fadeInOut 2.5s ease-in-out infinite;
+  min-height: 1.5em;
+}
+
+@keyframes fadeInOut {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Loading Spinner */
