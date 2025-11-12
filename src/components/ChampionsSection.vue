@@ -87,7 +87,7 @@ const getRoleIcon = (role) => {
     'JUNGLE': 'https://wiki.leagueoflegends.com/en-us/images/Jungle_icon.png',
     'MIDDLE': 'https://wiki.leagueoflegends.com/en-us/images/Middle_icon.png',
     'BOTTOM': 'https://wiki.leagueoflegends.com/en-us/images/Bottom_icon.png',
-    'SUPPORT': 'https://wiki.leagueoflegends.com/en-us/images/Support_icon.png'
+    'UTILITY': 'https://wiki.leagueoflegends.com/en-us/images/Support_icon.png'
   }
   return icons[role] || '❓'
 }
@@ -98,7 +98,7 @@ const formatRole = (role) => {
     'JUNGLE': 'Jungle',
     'MIDDLE': 'Mid Lane',
     'BOTTOM': 'ADC',
-    'SUPPORT': 'Support'
+    'UTILITY': 'Support'
   }
   return names[role] || role
 }

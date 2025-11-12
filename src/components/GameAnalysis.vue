@@ -28,20 +28,20 @@
       <div class="game-stats-overview" v-if="gameData">
         <div class="stats-main">
           <div class="stat-kda">
-            <div class="kda-numbers">{{ gameData.player.stats.Kills }}/{{ gameData.player.stats.Deaths }}/{{ gameData.player.stats.Assists }}</div>
-            <div class="kda-ratio">{{ calculateKDA(gameData.player.stats.Kills, gameData.player.stats.Deaths, gameData.player.stats.Assists) }} KDA</div>
+            <div class="kda-numbers">{{ gameData.player.stats.kills }}/{{ gameData.player.stats.deaths }}/{{ gameData.player.stats.assists }}</div>
+            <div class="kda-ratio">{{ calculateKDA(gameData.player.stats.kills, gameData.player.stats.deaths, gameData.player.stats.assists) }} KDA</div>
           </div>
           <div class="stat-item-horizontal">
             <span class="stat-icon">💰</span>
-            <span class="stat-value">{{ formatGold(gameData.player.stats.Gold) }}</span>
+            <span class="stat-value">{{ formatGold(gameData.player.stats.goldEarned) }}</span>
           </div>
           <div class="stat-item-horizontal">
             <span class="stat-icon">🌾</span>
-            <span class="stat-value">{{ gameData.player.stats.CS }} CS ({{ calculateCSPerMin(gameData.player.stats.CS, gameData.duration) }}/min)</span>
+            <span class="stat-value">{{ gameData.player.stats.totalMinionsKilled + gameData.player.stats.neutralMinionsKilled }} CS ({{ calculateCSPerMin(gameData.player.stats.totalMinionsKilled + gameData.player.stats.neutralMinionsKilled, gameData.duration) }}/min)</span>
           </div>
           <div class="stat-item-horizontal">
             <span class="stat-icon">👁️</span>
-            <span class="stat-value">{{ gameData.player.stats['Vision Score'] }} Vision</span>
+            <span class="stat-value">{{ gameData.player.stats.visionScore }} Vision</span>
           </div>
         </div>
 
@@ -56,11 +56,11 @@
             </div>
           </div>
           <div class="opponent-kda" v-if="gameData.opponent.stats">
-            <span class="opponent-kda-numbers">{{ gameData.opponent.stats.Kills }}/{{ gameData.opponent.stats.Deaths }}/{{ gameData.opponent.stats.Assists }}</span>
+            <span class="opponent-kda-numbers">{{ gameData.opponent.stats.kills }}/{{ gameData.opponent.stats.deaths }}/{{ gameData.opponent.stats.assists }}</span>
             <div class="opponent-mini-stats">
-              <span>💰 {{ formatGold(gameData.opponent.stats.Gold) }}</span>
-              <span>🌾 {{ gameData.opponent.stats.CS }}</span>
-              <span>👁️ {{ gameData.opponent.stats['Vision Score'] }}</span>
+              <span>💰 {{ formatGold(gameData.opponent.stats.goldEarned) }}</span>
+              <span>🌾 {{ gameData.opponent.stats.totalMinionsKilled + gameData.opponent.stats.neutralMinionsKilled }} CS ({{ calculateCSPerMin(gameData.opponent.stats.totalMinionsKilled + gameData.opponent.stats.neutralMinionsKilled, gameData.duration) }}/min)</span>
+              <span>👁️ {{ gameData.opponent.stats.visionScore }} Vision</span>
             </div>
           </div>
         </div>
