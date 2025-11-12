@@ -409,6 +409,15 @@ const handleAnalyzeGame = async (gameId) => {
       gameId
     )
     analysisData.value = analysis
+
+    // Update the score summary cache with the analysis result
+    if (analysis && analysis.player && analysis.player.score) {
+      scoreSummaries.value[gameId] = {
+        score: analysis.player.score,
+        summary: analysis.final_verdict?.summary || 'Analysis complete',
+        error: false
+      }
+    }
   } catch (error) {
     console.error('Error analyzing game:', error)
     analysisError.value = error.message || 'Failed to analyze game'
