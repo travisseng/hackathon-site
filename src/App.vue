@@ -13,7 +13,15 @@
     <template v-else>
       <!-- Tab Navigation -->
       <div class="tabs-container">
-        <div class="tabs-wrapper">
+        <button class="mobile-menu-toggle" @click="toggleMobileMenu">
+          <span class="hamburger-icon" :class="{ open: mobileMenuOpen }">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+          <span class="current-tab-label">{{ getCurrentTabLabel() }}</span>
+        </button>
+        <div class="tabs-wrapper" :class="{ 'mobile-open': mobileMenuOpen }">
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'wrapped' }"
@@ -185,7 +193,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import SummonerInput from './components/SummonerInput.vue'
@@ -212,6 +220,7 @@ const selectedGame = ref(null)
 const gamesData = ref([])
 const gamesLoading = ref(false)
 const gamesError = ref(null)
+const mobileMenuOpen = ref(false)
 
 // Pagination state
 const gamesCurrentPage = ref(1)
@@ -461,6 +470,7 @@ const resetApp = () => {
   loadingScores.value = {}
   accountData.value = null
   summonerDetails.value = { summonerName: '', tagLine: '', region: '', puuid: '' }
+  mobileMenuOpen.value = false
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -469,6 +479,7 @@ const switchTab = (tab) => {
   selectedGame.value = null
   analysisData.value = null
   analysisError.value = null
+  mobileMenuOpen.value = false // Close mobile menu when switching tabs
 
   // Fetch games when switching to analysis tab if not already loaded
   if (tab === 'analysis' && gamesPagesCache.value.size === 0 && !gamesLoading.value) {
@@ -482,6 +493,35 @@ const switchTab = (tab) => {
 
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+const toggleMobileMenu = () => {
+  mobileMenuOpen.value = !mobileMenuOpen.value
+}
+
+const getCurrentTabLabel = () => {
+  const labels = {
+    'wrapped': '🎁 Wrapped',
+    'analysis': '📊 Game Analysis',
+    'monthly': '📈 Monthly Progress'
+  }
+  return labels[activeTab.value] || 'Menu'
+}
+
+// Close mobile menu on scroll
+const handleScroll = () => {
+  if (mobileMenuOpen.value) {
+    mobileMenuOpen.value = false
+  }
+}
+
+// Setup scroll listener
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
 
 // Handle page change from GameHistory
 const handlePageChange = (page) => {
@@ -515,15 +555,17 @@ const handleAnalyzeGame = async (gameId) => {
       summonerDetails.value.summonerName,
       summonerDetails.value.tagLine,
       summonerDetails.value.region,
-      gameId
+      gameId,
+      summonerDetails.value.puuid
     )
     analysisData.value = analysis
 
     // Update the score summary cache with the analysis result
-    if (analysis && analysis.player && analysis.player.score) {
+    if (analysis && analysis.final_verdict) {
       scoreSummaries.value[gameId] = {
-        score: analysis.player.score,
-        summary: analysis.final_verdict?.summary || 'Analysis complete',
+        overall_grade: analysis.final_verdict.overall_grade,
+        tags: analysis.final_verdict.tags || [],
+        summary: analysis.final_verdict.summary || 'Analysis complete',
         error: false
       }
     }
@@ -874,6 +916,64 @@ const finalSection = ref(null)
   padding: 1rem 2rem;
 }
 
+.mobile-menu-toggle {
+  display: none;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.8rem 1rem;
+  background: rgba(200, 155, 60, 0.1);
+  border: 2px solid rgba(200, 155, 60, 0.3);
+  border-radius: 10px;
+  color: var(--lol-gold-light);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mobile-menu-toggle:hover {
+  background: rgba(200, 155, 60, 0.15);
+  border-color: var(--lol-gold);
+}
+
+.hamburger-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 24px;
+  height: 20px;
+  position: relative;
+}
+
+.hamburger-icon span {
+  display: block;
+  width: 100%;
+  height: 3px;
+  background: var(--lol-gold);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger-icon.open span:nth-child(1) {
+  transform: rotate(45deg) translate(8px, 8px);
+}
+
+.hamburger-icon.open span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-icon.open span:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -7px);
+}
+
+.current-tab-label {
+  flex: 1;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .tabs-wrapper {
   max-width: 1400px;
   margin: 0 auto;
@@ -946,21 +1046,87 @@ const finalSection = ref(null)
 
 @media (max-width: 768px) {
   .section {
-    padding: 3rem 1.5rem;
+    padding: 2rem 1rem;
   }
 
   .tabs-container {
-    padding: 0.8rem 1rem;
+    padding: 0.5rem;
+  }
+
+  .mobile-menu-toggle {
+    display: flex;
   }
 
   .tabs-wrapper {
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    margin-top: 0;
+    transition: all 0.3s ease;
+  }
+
+  .tabs-wrapper.mobile-open {
+    max-height: 500px;
+    opacity: 1;
+    margin-top: 0.8rem;
   }
 
   .tab-btn {
-    padding: 0.8rem 1.2rem;
+    width: 100%;
+    justify-content: center;
+    padding: 0.9rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  .tab-icon {
+    font-size: 1.2rem;
+  }
+
+  .tab-text {
+    font-size: 0.8rem;
+  }
+
+  .reset-btn {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
+    padding: 0.9rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .section {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .tabs-container {
+    padding: 0.4rem;
+  }
+
+  .mobile-menu-toggle {
+    padding: 0.7rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .current-tab-label {
     font-size: 0.85rem;
+  }
+
+  .hamburger-icon {
+    width: 20px;
+    height: 16px;
+    gap: 3px;
+  }
+
+  .hamburger-icon span {
+    height: 2.5px;
+  }
+
+  .tab-btn {
+    padding: 0.8rem 0.8rem;
+    font-size: 0.75rem;
   }
 
   .tab-icon {
@@ -972,10 +1138,8 @@ const finalSection = ref(null)
   }
 
   .reset-btn {
-    width: 100%;
-    justify-content: center;
-    margin-left: 0;
-    margin-top: 0.5rem;
+    padding: 0.8rem 0.8rem;
+    font-size: 0.75rem;
   }
 }
 

@@ -182,7 +182,7 @@ export function calculateWinRate(wins, losses) {
  * @param {string} gameId - Match ID
  * @returns {Promise<Object>} Game analysis data
  */
-export async function analyzeGame(gameName, gameTag, region, gameId) {
+export async function analyzeGame(gameName, gameTag, region, gameId, puuid) {
   try {
     const response = await fetch(
       'https://eo5yg2jjm8.execute-api.eu-west-3.amazonaws.com/analyze',
@@ -195,7 +195,8 @@ export async function analyzeGame(gameName, gameTag, region, gameId) {
           region: region.toLowerCase(),
           gamename: gameName,
           gametag: gameTag,
-          gameid: gameId
+          gameid: gameId,
+          puuid: puuid
         })
       }
     )

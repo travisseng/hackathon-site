@@ -13,14 +13,16 @@
           <div class="header-info">
             <h1 class="header-champion-name">{{ analysisData.player.champion }}</h1>
             <div class="header-role">{{ formatRole(analysisData.player.role) }}</div>
+            <div class="player-tags" v-if="analysisData.final_verdict.tags && analysisData.final_verdict.tags.length > 0">
+              <span v-for="(tag, idx) in analysisData.final_verdict.tags" :key="idx" class="tag-badge">{{ tag }}</span>
+            </div>
           </div>
         </div>
-        <div class="header-score">
-          <div class="score-number">{{ analysisData.player.score }}</div>
-          <div class="score-label">Overall Score</div>
-          <div class="score-bar">
-            <div class="score-fill" :style="{ width: (analysisData.player.score / 10 * 100) + '%' }"></div>
+        <div class="header-grade">
+          <div class="grade-badge" :class="'grade-' + analysisData.final_verdict.overall_grade.toLowerCase()">
+            {{ analysisData.final_verdict.overall_grade }}
           </div>
+          <div class="grade-label">Overall Grade</div>
         </div>
       </div>
 
@@ -74,8 +76,8 @@
         <div v-for="(phase, key) in analysisData.phase_analysis" :key="key" class="phase-card">
           <div class="phase-header">
             <h3 class="phase-name">{{ formatPhase(key) }}</h3>
-            <div class="phase-rating" :class="getRatingClass(phase.rating)">
-              {{ phase.rating }}/10
+            <div class="phase-rating-grade" :class="'grade-' + phase.rating_grade.toLowerCase()">
+              {{ phase.rating_grade }}
             </div>
           </div>
           <div class="phase-title">{{ phase.title }}</div>
@@ -239,13 +241,6 @@ const formatPhase = (phase) => {
   return phase.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 
-const getRatingClass = (rating) => {
-  if (rating >= 8) return 'rating-excellent'
-  if (rating >= 6) return 'rating-good'
-  if (rating >= 4) return 'rating-average'
-  return 'rating-poor'
-}
-
 const calculateKDA = (kills, deaths, assists) => {
   if (deaths === 0) return 'Perfect'
   return ((kills + assists) / deaths).toFixed(1)
@@ -333,39 +328,87 @@ const calculateCSPerMin = (cs, duration) => {
   letter-spacing: 0.1em;
 }
 
-.header-score {
+.player-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+.tag-badge {
+  padding: 0.4rem 0.8rem;
+  background: rgba(200, 155, 60, 0.15);
+  border: 1px solid rgba(200, 155, 60, 0.4);
+  border-radius: 15px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--lol-gold-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.header-grade {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.8rem;
 }
 
-.score-number {
-  font-size: 3rem;
+.grade-badge {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
   font-weight: 900;
-  color: var(--lol-gold);
+  border-radius: 15px;
+  border: 4px solid;
+  text-shadow: 0 0 20px currentColor;
+  transition: all 0.3s ease;
 }
 
-.score-label {
+.grade-badge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px currentColor;
+}
+
+.grade-s {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.2));
+  color: #ffd700;
+  border-color: #ffd700;
+}
+
+.grade-a {
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.2), rgba(0, 170, 130, 0.2));
+  color: #00d4aa;
+  border-color: #00d4aa;
+}
+
+.grade-b {
+  background: linear-gradient(135deg, rgba(200, 155, 60, 0.2), rgba(180, 135, 40, 0.2));
+  color: var(--lol-gold);
+  border-color: var(--lol-gold);
+}
+
+.grade-c {
+  background: linear-gradient(135deg, rgba(255, 165, 0, 0.2), rgba(235, 145, 0, 0.2));
+  color: #ffa500;
+  border-color: #ffa500;
+}
+
+.grade-d {
+  background: linear-gradient(135deg, rgba(255, 70, 85, 0.2), rgba(235, 50, 65, 0.2));
+  color: #ff4655;
+  border-color: #ff4655;
+}
+
+.grade-label {
   font-size: 0.9rem;
   color: var(--lol-gold-light);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-}
-
-.score-bar {
-  width: 150px;
-  height: 8px;
-  background: rgba(200, 155, 60, 0.2);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.score-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--lol-gold), var(--lol-gold-light));
-  border-radius: 10px;
-  transition: width 0.5s ease;
+  font-weight: 700;
 }
 
 /* Game Stats Overview */
@@ -554,35 +597,22 @@ const calculateCSPerMin = (cs, duration) => {
   letter-spacing: 0.05em;
 }
 
-.phase-rating {
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
+.phase-rating-grade {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
   font-weight: 900;
-  font-size: 0.9rem;
+  font-size: 1.5rem;
+  border: 3px solid;
+  text-shadow: 0 0 10px currentColor;
+  transition: all 0.3s ease;
 }
 
-.rating-excellent {
-  background: rgba(0, 212, 170, 0.2);
-  color: #00d4aa;
-  border: 2px solid #00d4aa;
-}
-
-.rating-good {
-  background: rgba(200, 155, 60, 0.2);
-  color: var(--lol-gold);
-  border: 2px solid var(--lol-gold);
-}
-
-.rating-average {
-  background: rgba(255, 165, 0, 0.2);
-  color: #ffa500;
-  border: 2px solid #ffa500;
-}
-
-.rating-poor {
-  background: rgba(255, 70, 85, 0.2);
-  color: #ff4655;
-  border: 2px solid #ff4655;
+.phase-rating-grade:hover {
+  transform: scale(1.1);
 }
 
 .phase-title {
@@ -1042,6 +1072,396 @@ const calculateCSPerMin = (cs, duration) => {
 
   .opponent-stats-overview {
     min-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .analysis-section {
+    padding: 1.5rem 0.5rem;
+  }
+
+  .analysis-wrapper {
+    padding: 0 0.5rem;
+  }
+
+  .back-btn {
+    font-size: 0.85rem;
+    padding: 0.7rem 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .game-header {
+    padding: 1.5rem;
+  }
+
+  .header-champion-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .header-champion-name {
+    font-size: 1.8rem;
+  }
+
+  .header-role {
+    font-size: 0.85rem;
+  }
+
+  .grade-badge {
+    width: 80px;
+    height: 80px;
+    font-size: 3rem;
+  }
+
+  .grade-label {
+    font-size: 0.75rem;
+  }
+
+  .stats-main {
+    gap: 0.8rem;
+    padding: 1.2rem;
+  }
+
+  .stat-item-horizontal {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+
+  .stat-value {
+    font-size: 0.8rem;
+  }
+
+  .opponent-stats-overview {
+    padding: 1.2rem;
+  }
+
+  .opponent-mini-stats {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .section-header {
+    margin: 2rem 0 1rem;
+  }
+
+  .section-title-analysis {
+    font-size: 1.5rem;
+  }
+
+  .phase-grid {
+    gap: 1rem;
+  }
+
+  .phase-card {
+    padding: 1.2rem;
+  }
+
+  .phase-name {
+    font-size: 1rem;
+  }
+
+  .phase-title {
+    font-size: 0.9rem;
+  }
+
+  .strengths-list li,
+  .issues-list li {
+    font-size: 0.8rem;
+  }
+
+  .overview-title {
+    font-size: 1.2rem;
+    padding: 0.8rem;
+  }
+
+  .overview-card {
+    padding: 1.2rem;
+  }
+
+  .card-title {
+    font-size: 1rem;
+  }
+
+  .card-list li {
+    font-size: 0.8rem;
+  }
+
+  .coaching-card {
+    padding: 1.5rem;
+  }
+
+  .coaching-title {
+    font-size: 1.1rem;
+  }
+
+  .coaching-problem,
+  .coaching-solutions {
+    padding: 0.8rem;
+  }
+
+  .action-card {
+    padding: 1.2rem;
+  }
+
+  .action-content {
+    font-size: 0.85rem;
+  }
+
+  .verdict-section {
+    padding: 1.5rem;
+  }
+
+  .verdict-summary {
+    font-size: 1rem;
+  }
+
+  .takeaways-title {
+    font-size: 1.1rem;
+  }
+
+  .takeaways-list li {
+    font-size: 0.85rem;
+  }
+
+  .outcome-section {
+    padding: 1.5rem;
+  }
+
+  .outcome-title {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .analysis-section {
+    padding: 1rem 0.25rem;
+  }
+
+  .analysis-wrapper {
+    padding: 0;
+  }
+
+  .back-btn {
+    font-size: 0.8rem;
+    padding: 0.6rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .game-header {
+    padding: 1rem;
+  }
+
+  .header-left {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .header-champion-icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .header-champion-name {
+    font-size: 1.5rem;
+  }
+
+  .header-role {
+    font-size: 0.75rem;
+  }
+
+  .player-tags {
+    justify-content: center;
+  }
+
+  .tag-badge {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
+  }
+
+  .grade-badge {
+    width: 70px;
+    height: 70px;
+    font-size: 2.5rem;
+  }
+
+  .grade-label {
+    font-size: 0.7rem;
+  }
+
+  .game-stats-overview {
+    gap: 1rem;
+  }
+
+  .stats-main {
+    gap: 0.6rem;
+    padding: 1rem;
+  }
+
+  .stat-kda {
+    padding: 0.6rem 1rem;
+  }
+
+  .kda-numbers {
+    font-size: 1.1rem;
+  }
+
+  .kda-ratio {
+    font-size: 0.75rem;
+  }
+
+  .stat-item-horizontal {
+    padding: 0.6rem 0.8rem;
+    min-width: 100%;
+  }
+
+  .stat-icon {
+    font-size: 1rem;
+  }
+
+  .stat-value {
+    font-size: 0.75rem;
+  }
+
+  .opponent-stats-overview {
+    padding: 1rem;
+  }
+
+  .section-header {
+    margin: 1.5rem 0 1rem;
+  }
+
+  .section-title-analysis {
+    font-size: 1.3rem;
+  }
+
+  .phase-grid {
+    gap: 0.8rem;
+  }
+
+  .phase-card {
+    padding: 1rem;
+  }
+
+  .phase-name {
+    font-size: 0.9rem;
+  }
+
+  .phase-rating-grade {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+
+  .phase-title {
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.8rem;
+  }
+
+  .list-header {
+    font-size: 0.8rem;
+  }
+
+  .strengths-list li,
+  .issues-list li {
+    font-size: 0.75rem;
+    padding: 0.4rem 0 0.4rem 1.2rem;
+  }
+
+  .overview-title {
+    font-size: 1.1rem;
+    padding: 0.7rem;
+  }
+
+  .overview-card {
+    padding: 1rem;
+  }
+
+  .card-title {
+    font-size: 0.95rem;
+  }
+
+  .card-list li {
+    font-size: 0.75rem;
+  }
+
+  .coaching-card {
+    padding: 1.2rem;
+  }
+
+  .coaching-title {
+    font-size: 1rem;
+  }
+
+  .coaching-problem,
+  .coaching-solutions {
+    padding: 0.7rem;
+  }
+
+  .problem-label,
+  .solutions-label {
+    font-size: 0.75rem;
+  }
+
+  .coaching-problem p {
+    font-size: 0.85rem;
+  }
+
+  .solutions-list li {
+    font-size: 0.8rem;
+  }
+
+  .action-card {
+    padding: 1rem;
+  }
+
+  .priority-badge {
+    padding: 0.3rem 0.8rem;
+    font-size: 0.7rem;
+  }
+
+  .action-content {
+    font-size: 0.8rem;
+  }
+
+  .verdict-section {
+    padding: 1.2rem;
+  }
+
+  .verdict-summary {
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .takeaways-title {
+    font-size: 1rem;
+  }
+
+  .takeaways-list li {
+    font-size: 0.8rem;
+    padding: 0.6rem 0 0.6rem 1.3rem;
+  }
+
+  .outcome-section {
+    padding: 1.2rem;
+  }
+
+  .outcome-title {
+    font-size: 1.2rem;
+  }
+
+  .outcome-summary {
+    font-size: 0.9rem;
+  }
+
+  .factors-title {
+    font-size: 0.9rem;
+  }
+
+  .factors-list li {
+    font-size: 0.8rem;
   }
 }
 </style>

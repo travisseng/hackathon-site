@@ -82,10 +82,13 @@
               <div v-else-if="!props.scoreSummaries[game.matchId].error" class="score-content">
                 <div class="score-header">
                   <div class="score-badge">
-                    <span class="score-label">Performance Score</span>
-                    <span class="score-value" :class="getScoreClass(props.scoreSummaries[game.matchId].score)">
-                      {{ props.scoreSummaries[game.matchId].score }}/10
-                    </span>
+                    <span class="score-label">Performance Grade</span>
+                    <div class="grade-badge-small" :class="'grade-' + props.scoreSummaries[game.matchId].overall_grade.toLowerCase()">
+                      {{ props.scoreSummaries[game.matchId].overall_grade }}
+                    </div>
+                  </div>
+                  <div class="player-tags-summary" v-if="props.scoreSummaries[game.matchId].tags && props.scoreSummaries[game.matchId].tags.length > 0">
+                    <span v-for="(tag, idx) in props.scoreSummaries[game.matchId].tags" :key="idx" class="tag-badge-small">{{ tag }}</span>
                   </div>
                 </div>
 
@@ -369,14 +372,6 @@ const getLaneFromContext = (game) => {
   return 'Unknown'
 }
 
-// Get CSS class based on score value
-const getScoreClass = (score) => {
-  if (score >= 8) return 'score-excellent'
-  if (score >= 7) return 'score-good'
-  if (score >= 5) return 'score-average'
-  return 'score-poor'
-}
-
 // Fetch score summary for a specific match
 const fetchScoreSummary = async (matchId, gameName, gameTag) => {
   if (!matchId || !gameName || !gameTag) return
@@ -397,7 +392,8 @@ const fetchScoreSummary = async (matchId, gameName, gameTag) => {
       emit('update-score', matchId, { error: true })
     } else {
       emit('update-score', matchId, {
-        score: data.score,
+        overall_grade: data.overall_grade,
+        tags: data.tags || [],
         summary: data.summary,
         error: false
       })
@@ -768,6 +764,8 @@ const analyzeGame = (matchId) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .score-badge {
@@ -784,37 +782,71 @@ const analyzeGame = (matchId) => {
   letter-spacing: 0.05em;
 }
 
-.score-value {
+.grade-badge-small {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1.8rem;
   font-weight: 900;
-  padding: 0.3rem 1rem;
-  border-radius: 8px;
-  background: rgba(10, 20, 40, 0.6);
-  border: 2px solid;
+  border-radius: 10px;
+  border: 3px solid;
+  text-shadow: 0 0 10px currentColor;
+  transition: all 0.3s ease;
 }
 
-.score-excellent {
+.grade-badge-small:hover {
+  transform: scale(1.1);
+}
+
+.grade-s {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.2));
+  color: #ffd700;
+  border-color: #ffd700;
+}
+
+.grade-a {
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.2), rgba(0, 170, 130, 0.2));
   color: #00d4aa;
   border-color: #00d4aa;
-  box-shadow: 0 0 15px rgba(0, 212, 170, 0.3);
 }
 
-.score-good {
-  color: #0ac8b9;
-  border-color: #0ac8b9;
-  box-shadow: 0 0 15px rgba(10, 200, 185, 0.3);
-}
-
-.score-average {
+.grade-b {
+  background: linear-gradient(135deg, rgba(200, 155, 60, 0.2), rgba(180, 135, 40, 0.2));
   color: var(--lol-gold);
   border-color: var(--lol-gold);
-  box-shadow: 0 0 15px rgba(200, 155, 60, 0.3);
 }
 
-.score-poor {
+.grade-c {
+  background: linear-gradient(135deg, rgba(255, 165, 0, 0.2), rgba(235, 145, 0, 0.2));
+  color: #ffa500;
+  border-color: #ffa500;
+}
+
+.grade-d {
+  background: linear-gradient(135deg, rgba(255, 70, 85, 0.2), rgba(235, 50, 65, 0.2));
   color: #ff4655;
   border-color: #ff4655;
-  box-shadow: 0 0 15px rgba(255, 70, 85, 0.3);
+}
+
+.player-tags-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.tag-badge-small {
+  padding: 0.3rem 0.7rem;
+  background: rgba(200, 155, 60, 0.15);
+  border: 1px solid rgba(200, 155, 60, 0.4);
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--lol-gold-light);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .score-summary-text {
@@ -946,7 +978,9 @@ const analyzeGame = (matchId) => {
     font-size: 0.8rem;
   }
 
-  .score-value {
+  .grade-badge-small {
+    width: 45px;
+    height: 45px;
     font-size: 1.5rem;
   }
 
@@ -961,6 +995,20 @@ const analyzeGame = (matchId) => {
     gap: 0.5rem;
   }
 
+  .score-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .player-tags-summary {
+    width: 100%;
+  }
+
+  .tag-badge-small {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.6rem;
+  }
+
   .pagination {
     flex-direction: column;
     gap: 1rem;
@@ -973,6 +1021,157 @@ const analyzeGame = (matchId) => {
 
   .pagination-btn {
     flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-history-section {
+    padding: 2rem 0.5rem;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .section-subtitle {
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+  }
+
+  .game-card {
+    border-radius: 12px;
+  }
+
+  .game-result-bar {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.75rem;
+  }
+
+  .game-date {
+    font-size: 0.65rem;
+  }
+
+  .game-duration {
+    font-size: 0.75rem;
+  }
+
+  .game-content {
+    padding: 1rem;
+    gap: 0.8rem;
+  }
+
+  .champion-icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .champion-name {
+    font-size: 1rem;
+  }
+
+  .champion-role {
+    font-size: 0.75rem;
+  }
+
+  .kda-numbers {
+    font-size: 1.1rem;
+  }
+
+  .kda-ratio {
+    font-size: 0.75rem;
+  }
+
+  .stat-item {
+    font-size: 0.75rem;
+  }
+
+  .stat-icon {
+    font-size: 0.9rem;
+  }
+
+  .opponent-info {
+    padding: 0.8rem;
+  }
+
+  .opponent-icon {
+    width: 35px;
+    height: 35px;
+  }
+
+  .opponent-name {
+    font-size: 0.8rem;
+  }
+
+  .opponent-champion {
+    font-size: 0.7rem;
+  }
+
+  .opponent-kda-numbers {
+    font-size: 0.85rem;
+  }
+
+  .opponent-kda-ratio {
+    font-size: 0.7rem;
+  }
+
+  .score-content {
+    padding: 1rem;
+    gap: 0.8rem;
+  }
+
+  .score-label {
+    font-size: 0.8rem;
+  }
+
+  .grade-badge-small {
+    width: 40px;
+    height: 40px;
+    font-size: 1.4rem;
+    border-width: 2px;
+  }
+
+  .tag-badge-small {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .summary-label {
+    font-size: 0.75rem;
+  }
+
+  .summary-content {
+    font-size: 0.8rem;
+  }
+
+  .analyze-btn {
+    padding: 0.7rem 1.2rem;
+    font-size: 0.8rem;
+  }
+
+  .btn-icon {
+    font-size: 1rem;
+  }
+
+  .pagination {
+    padding: 1rem;
+  }
+
+  .pagination-btn {
+    padding: 0.7rem 1.2rem;
+    font-size: 0.8rem;
+  }
+
+  .page-numbers {
+    font-size: 0.9rem;
+  }
+
+  .current-page {
+    font-size: 1rem;
+  }
+
+  .games-count {
+    font-size: 0.75rem;
   }
 }
 

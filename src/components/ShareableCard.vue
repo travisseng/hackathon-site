@@ -15,6 +15,8 @@
             <div class="header-player" v-if="summonerName">
               <span class="player-name">{{ summonerName }}</span>
               <span class="player-tag">#{{ summonerTag }}</span>
+              
+              <span class="role-text-compact"><img style="position: relative; top: 3px;" :src="getMostPlayedRoleIcon()" alt="Role Icon" class="role-icon-compact" /> MAIN</span>
             </div>
           </div>
         </div>
@@ -51,11 +53,6 @@
             </div>
           </div>
 
-          <!-- Role Badge - First -->
-          <div class="role-display-compact">
-            <img :src="getMostPlayedRoleIcon()" alt="Role Icon" class="role-icon-compact" />
-            <span class="role-text-compact">{{ getMostPlayedRole().toUpperCase() }} MAIN</span>
-          </div>
 
           <!-- Key Stats Grid -->
           <div class="stats-grid">
@@ -394,12 +391,19 @@ const resetApp = () => {
   background: radial-gradient(circle at 50% 50%, rgba(200, 155, 60, 0.08) 0%, transparent 60%);
   min-height: 100vh;
   padding: 4rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
 }
 
 .content-wrapper {
-  max-width: 500px;
+  max-width: 550px;
   width: 100%;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .section-title {
@@ -413,12 +417,11 @@ const resetApp = () => {
   background-clip: text;
 }
 
-/* Story Card - 9:16 Ratio */
+/* Story Card - 9:16 Ratio - Fixed dimensions */
 .story-card {
   position: relative;
-  width: 100%;
-  aspect-ratio: 9 / 16;
-  max-width: 500px;
+  width: 405px;
+  height: 720px;
   margin: 0 auto;
   border-radius: 25px;
   overflow: hidden;
@@ -426,6 +429,9 @@ const resetApp = () => {
               0 0 60px rgba(200, 155, 60, 0.4);
   display: flex;
   flex-direction: column;
+  transform-origin: center center;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
 }
 
 /* HEADER */
@@ -518,7 +524,9 @@ const resetApp = () => {
 /* TOP HALF: Champions */
 .champions-half {
   position: relative;
-  flex: 0.85;
+  flex: 1;
+  min-height: 33%;
+  height: 100%;
   width: 100%;
   overflow: hidden;
 }
@@ -595,7 +603,7 @@ const resetApp = () => {
   align-items: center;
   justify-content: center;
   gap: 0.7rem;
-  padding: 0.6rem 1rem;
+  padding: 0.6rem 0.6rem;
   background: linear-gradient(135deg, rgba(200, 155, 60, 0.3), rgba(200, 155, 60, 0.1));
   border: 2px solid var(--lol-gold);
   border-radius: 10px;
@@ -837,55 +845,121 @@ const resetApp = () => {
   font-size: 1.2rem;
 }
 
-@media (max-width: 600px) {
+/* Scale card down on smaller screens while maintaining exact proportions */
+@media (max-width: 768px) {
+  .shareable-section {
+    padding: 2rem 1rem;
+  }
+
   .content-wrapper {
     max-width: 100%;
+    padding: 0;
+  }
+
+  .section-title {
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
   }
 
   .story-card {
-    max-width: 100%;
-    border-radius: 20px;
+    transform: scale(0.9);
   }
 
-  .card-header {
-    padding: 0.5rem 0.8rem;
-  }
-
-  .header-top {
-    font-size: 0.45rem;
-  }
-
-  .player-name {
-    font-size: 1rem;
-  }
-
-  .player-tag {
-    font-size: 0.75rem;
-  }
-
-  .champion-name {
-    font-size: 0.85rem;
-  }
-
-  .champion-games-count {
-    font-size: 0.6rem;
-  }
-
-  .stat-number {
-    font-size: 1.3rem;
-  }
-
-  .stat-label {
-    font-size: 0.5rem;
-  }
-
-  .rank-display,
-  .role-display-compact {
-    padding: 0.5rem 0.8rem;
+  .share-instructions {
+    margin-top: 1rem;
   }
 
   .share-buttons {
     flex-direction: column;
+    gap: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .shareable-section {
+    padding: 1.5rem 0.5rem;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .story-card {
+    transform: scale(0.8);
+  }
+
+  .share-instructions {
+    margin-top: 0.8rem;
+  }
+
+  .instruction-text {
+    font-size: 0.9rem;
+  }
+
+  .share-btn {
+    padding: 0.9rem 1.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .shareable-section {
+    padding: 1rem 0.25rem;
+  }
+
+  .section-title {
+    font-size: 1.3rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .story-card {
+    transform: scale(0.75);
+  }
+
+  .share-instructions {
+    margin-top: 0.5rem;
+  }
+
+  .instruction-text {
+    font-size: 0.85rem;
+  }
+
+  .share-btn {
+    padding: 0.8rem 1.3rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .shareable-section {
+    padding: 0.75rem 0.25rem;
+  }
+
+  .section-title {
+    font-size: 1.2rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .story-card {
+    transform: scale(0.7);
+  }
+
+  .share-instructions {
+    margin-top: 0.3rem;
+  }
+
+  .instruction-text {
+    font-size: 0.8rem;
+  }
+
+  .share-btn {
+    padding: 0.75rem 1.2rem;
+    font-size: 0.8rem;
+  }
+
+  .btn-icon {
+    font-size: 1rem;
   }
 }
 </style>
