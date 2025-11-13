@@ -117,9 +117,14 @@
             :game-tag="summonerDetails.tagLine"
             :score-summaries="scoreSummaries"
             :loading-scores="loadingScores"
+            :current-page="gamesCurrentPage"
+            :page-size="gamesPageSize"
+            :has-more="gamesHasMore"
+            :total-games="gamesTotalCount"
             @analyze="handleAnalyzeGame"
             @update-score="handleScoreUpdate"
             @update-loading="handleLoadingUpdate"
+            @page-change="handlePageChange"
           />
 
           <!-- Analysis Loading State -->
@@ -207,6 +212,15 @@ const selectedGame = ref(null)
 const gamesData = ref([])
 const gamesLoading = ref(false)
 const gamesError = ref(null)
+
+// Pagination state
+const gamesCurrentPage = ref(1)
+const gamesPageSize = ref(10)
+const gamesHasMore = ref(false)
+const gamesTotalCount = ref(0)
+
+// Cache for fetched game pages
+const gamesPagesCache = ref(new Map())
 
 // Score summaries cache
 const scoreSummaries = ref({})
@@ -303,31 +317,56 @@ const getSortedPlayTime = (playTimeData) => {
   return Object.fromEntries(entries)
 }
 
-// Fetch games from API
-const fetchGames = async () => {
-  if (!summonerDetails.value.summonerName || gamesData.value.length > 0) {
-    return // Don't fetch if no summoner or already fetched
+// Fetch games from API with pagination
+const fetchGames = async (page = 1) => {
+  if (!summonerDetails.value.summonerName) {
+    return // Don't fetch if no summoner
+  }
+
+  // Check if this page is already cached
+  if (gamesPagesCache.value.has(page)) {
+    console.log(`Page ${page} already cached, using cached data`)
+    const cachedData = gamesPagesCache.value.get(page)
+    gamesData.value = cachedData.files
+    gamesCurrentPage.value = cachedData.page
+    gamesHasMore.value = cachedData.has_more
+    gamesTotalCount.value = cachedData.total_files
+    return
   }
 
   gamesLoading.value = true
   gamesError.value = null
 
   try {
-    const games = await fetchAllGames(
+    const result = await fetchAllGames(
       summonerDetails.value.summonerName,
       summonerDetails.value.tagLine,
       summonerDetails.value.region,
-      summonerDetails.value.puuid
+      summonerDetails.value.puuid,
+      page,
+      gamesPageSize.value
     )
 
     // Sort games by gameCreation timestamp (most recent first)
-    const sortedGames = games.sort((a, b) => {
+    const sortedGames = result.files.sort((a, b) => {
       const timestampA = a.gameCreation || 0
       const timestampB = b.gameCreation || 0
       return timestampB - timestampA // Descending order
     })
 
+    // Update state
     gamesData.value = sortedGames
+    gamesCurrentPage.value = result.page
+    gamesHasMore.value = result.has_more
+    gamesTotalCount.value = result.total_files
+
+    // Cache the page data
+    gamesPagesCache.value.set(page, {
+      files: sortedGames,
+      page: result.page,
+      has_more: result.has_more,
+      total_files: result.total_files
+    })
   } catch (error) {
     console.error('Error fetching games:', error)
     gamesError.value = error.message || 'Failed to fetch game history'
@@ -409,6 +448,11 @@ const resetApp = () => {
   selectedGame.value = null
   gamesData.value = []
   gamesError.value = null
+  gamesCurrentPage.value = 1
+  gamesPageSize.value = 10
+  gamesHasMore.value = false
+  gamesTotalCount.value = 0
+  gamesPagesCache.value.clear()
   analysisData.value = null
   analysisError.value = null
   monthlyData.value = []
@@ -427,8 +471,8 @@ const switchTab = (tab) => {
   analysisError.value = null
 
   // Fetch games when switching to analysis tab if not already loaded
-  if (tab === 'analysis' && gamesData.value.length === 0 && !gamesLoading.value) {
-    fetchGames()
+  if (tab === 'analysis' && gamesPagesCache.value.size === 0 && !gamesLoading.value) {
+    fetchGames(1)
   }
 
   // Fetch monthly data when switching to monthly tab if not already loaded
@@ -436,6 +480,12 @@ const switchTab = (tab) => {
     fetchMonthly()
   }
 
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// Handle page change from GameHistory
+const handlePageChange = (page) => {
+  fetchGames(page)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 

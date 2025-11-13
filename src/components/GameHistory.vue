@@ -6,7 +6,7 @@
 
       <div class="games-list">
         <div
-          v-for="game in paginatedGames"
+          v-for="game in displayGames"
           :key="game.matchId"
           class="game-card"
           :class="{ victory: game.player.win, defeat: !game.player.win }"
@@ -127,7 +127,7 @@
             Page <span class="current-page">{{ currentPage }}</span> of <span class="total-pages">{{ totalPages }}</span>
           </span>
           <span class="games-count">
-            Showing {{ (currentPage - 1) * gamesPerPage + 1 }}-{{ Math.min(currentPage * gamesPerPage, displayGames.length) }} of {{ displayGames.length }} games
+            Showing {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, totalGames || displayGames.length) }} of {{ totalGames || displayGames.length }} games
           </span>
         </div>
 
@@ -163,14 +163,26 @@ const props = defineProps({
   loadingScores: {
     type: Object,
     default: () => ({})
+  },
+  currentPage: {
+    type: Number,
+    default: 1
+  },
+  pageSize: {
+    type: Number,
+    default: 10
+  },
+  hasMore: {
+    type: Boolean,
+    default: false
+  },
+  totalGames: {
+    type: Number,
+    default: 0
   }
 })
 
-const emit = defineEmits(['analyze', 'update-score', 'update-loading'])
-
-// Pagination state
-const currentPage = ref(1)
-const gamesPerPage = 10
+const emit = defineEmits(['analyze', 'update-score', 'update-loading', 'page-change'])
 
 // Mock data if no games provided
 const mockGames = [
@@ -254,38 +266,37 @@ const mockGames = [
   }
 ]
 
-// Use provided games or fallback to mock
+// Use provided games or fallback to mock (for display purposes)
 const displayGames = computed(() => {
   return props.games.length > 0 ? props.games : mockGames
 })
 
-// Paginated games - only show games for current page
-const paginatedGames = computed(() => {
-  const startIndex = (currentPage.value - 1) * gamesPerPage
-  const endIndex = startIndex + gamesPerPage
-  return displayGames.value.slice(startIndex, endIndex)
-})
-
-// Total pages
+// Total pages calculated from backend total
 const totalPages = computed(() => {
-  return Math.ceil(displayGames.value.length / gamesPerPage)
+  if (props.totalGames === 0) {
+    // Fallback for mock data
+    return Math.ceil(displayGames.value.length / props.pageSize)
+  }
+  return Math.ceil(props.totalGames / props.pageSize)
 })
 
-// Pagination controls
+// Pagination controls - emit events to parent
 const goToPage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
-    currentPage.value = page
-    // Scroll to top of game list
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    emit('page-change', page)
   }
 }
 
 const nextPage = () => {
-  goToPage(currentPage.value + 1)
+  if (props.currentPage < totalPages.value) {
+    emit('page-change', props.currentPage + 1)
+  }
 }
 
 const prevPage = () => {
-  goToPage(currentPage.value - 1)
+  if (props.currentPage > 1) {
+    emit('page-change', props.currentPage - 1)
+  }
 }
 
 const getChampionIcon = (championName) => {
@@ -399,27 +410,18 @@ const fetchScoreSummary = async (matchId, gameName, gameTag) => {
   }
 }
 
-// Fetch score summaries only for the current page
+// Fetch score summaries for all games on the current page
 const fetchAllScoreSummaries = () => {
-  const gamesToFetch = paginatedGames.value
+  const gamesToFetch = displayGames.value
   gamesToFetch.forEach(game => {
     const gameName = game.player.name
     fetchScoreSummary(game.matchId, gameName, props.gameTag)
   })
 }
 
-// Watch for changes in current page and fetch scores for new page
-watch(currentPage, () => {
-  if (props.gameTag) {
-    fetchAllScoreSummaries()
-  }
-})
-
-// Watch for changes in games or gameTag
-watch([() => props.games, () => props.gameTag], () => {
+// Watch for changes in games to fetch scores
+watch(() => props.games, () => {
   if (props.games.length > 0 && props.gameTag) {
-    // Reset to page 1 when games change
-    currentPage.value = 1
     fetchAllScoreSummaries()
   }
 }, { immediate: false })

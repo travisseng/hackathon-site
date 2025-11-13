@@ -48,14 +48,16 @@ export async function fetchPlayerStats(summonerName, tagLine, region = null) {
 }
 
 /**
- * Fetch all games for a player
+ * Fetch all games for a player with pagination
  * @param {string} gameName - Game name
  * @param {string} gameTag - Game tag (e.g., 'EUW')
  * @param {string} region - Region (e.g., 'euw1')
  * @param {string|null} puuid - Player UUID (optional)
- * @returns {Promise<Array>} List of games
+ * @param {number} page - Page number (default: 1)
+ * @param {number} pageSize - Number of games per page (default: 10)
+ * @returns {Promise<Object>} Object containing { files, page, page_size, has_more, total_files }
  */
-export async function fetchAllGames(gameName, gameTag, region = 'euw1', puuid = null) {
+export async function fetchAllGames(gameName, gameTag, region = 'euw1', puuid = null, page = 1, pageSize = 10) {
   try {
     const response = await fetch(
       `${API_BASE_URL}/getAllGames`,
@@ -68,7 +70,9 @@ export async function fetchAllGames(gameName, gameTag, region = 'euw1', puuid = 
           region: region.toLowerCase(),
           gamename: gameName,
           gametag: gameTag,
-          puuid: puuid
+          puuid: puuid,
+          page: page,
+          page_size: pageSize
         })
       }
     )
@@ -80,8 +84,14 @@ export async function fetchAllGames(gameName, gameTag, region = 'euw1', puuid = 
 
     const data = await response.json()
 
-    // API returns { files: [...games] }
-    return data.files || []
+    // API returns { files: [...games], page, page_size, has_more, total_files }
+    return {
+      files: data.files || [],
+      page: data.page || page,
+      page_size: data.page_size || pageSize,
+      has_more: data.has_more || false,
+      total_files: data.total_files || 0
+    }
   } catch (error) {
     console.error('Error fetching games:', error)
     throw error
