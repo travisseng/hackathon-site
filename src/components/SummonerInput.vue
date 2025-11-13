@@ -10,6 +10,38 @@
         <h3 class="form-title">Enter Your Summoner Info</h3>
         <p class="form-description">Discover your year in ranked in the Rift</p>
 
+        <div v-if="searchHistory.length > 0" class="history-section">
+          <button
+            class="history-toggle"
+            @click="showHistory = !showHistory"
+            type="button"
+          >
+            <span>{{ showHistory ? '▼' : '▶' }} Recent Searches</span>
+            <span class="history-count">{{ searchHistory.length }}</span>
+          </button>
+
+          <div v-if="showHistory" class="history-dropdown">
+            <div class="history-items">
+              <button
+                v-for="(item, index) in searchHistory"
+                :key="index"
+                class="history-item"
+                @click="loadFromHistory(item)"
+                type="button"
+              >
+                <div class="history-item-main">
+                  <span class="history-name">{{ item.summonerName }}#{{ item.tagLine }}</span>
+                  <span class="history-region">{{ item.region.toUpperCase() }}</span>
+                </div>
+                <span class="history-type">{{ item.rankedType === 'solo' ? 'Solo/Duo' : item.rankedType === 'flex' ? 'Flex' : 'Both' }}</span>
+              </button>
+            </div>
+            <button class="clear-history-btn" @click="clearHistory" type="button">
+              Clear History
+            </button>
+          </div>
+        </div>
+
         <div class="input-group">
           <div class="input-wrapper">
             <label for="summonerName">Summoner Name</label>
@@ -106,7 +138,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted, onMounted } from 'vue'
 
 const emit = defineEmits(['submit'])
 
@@ -119,9 +151,14 @@ const error = ref('')
 const progress = ref(0)
 const progressMessage = ref('')
 const funnyMessage = ref('')
+const showHistory = ref(false)
+const searchHistory = ref([])
 
 let ws = null
 let funnyMessageInterval = null
+
+const MAX_HISTORY_ITEMS = 10
+const HISTORY_STORAGE_KEY = 'lol-wrapped-search-history'
 
 // Funny League of Legends themed loading messages
 const funnyLoadingMessages = [
@@ -201,6 +238,69 @@ const regionToRouting = {
   'vn2': 'sea'
 }
 
+// Load search history from localStorage
+const loadSearchHistory = () => {
+  try {
+    const stored = localStorage.getItem(HISTORY_STORAGE_KEY)
+    if (stored) {
+      searchHistory.value = JSON.parse(stored)
+    }
+  } catch (e) {
+    console.error('Failed to load search history:', e)
+  }
+}
+
+// Save search history to localStorage
+const saveSearchHistory = () => {
+  try {
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(searchHistory.value))
+  } catch (e) {
+    console.error('Failed to save search history:', e)
+  }
+}
+
+// Add a search to history
+const addToHistory = (search) => {
+  // Remove duplicate if it exists
+  searchHistory.value = searchHistory.value.filter(
+    item => !(item.summonerName === search.summonerName &&
+              item.tagLine === search.tagLine &&
+              item.region === search.region)
+  )
+
+  // Add to beginning of array
+  searchHistory.value.unshift({
+    summonerName: search.summonerName,
+    tagLine: search.tagLine,
+    region: search.region,
+    rankedType: search.rankedType,
+    timestamp: Date.now()
+  })
+
+  // Keep only MAX_HISTORY_ITEMS
+  if (searchHistory.value.length > MAX_HISTORY_ITEMS) {
+    searchHistory.value = searchHistory.value.slice(0, MAX_HISTORY_ITEMS)
+  }
+
+  saveSearchHistory()
+}
+
+// Load a search from history
+const loadFromHistory = (historyItem) => {
+  summonerName.value = historyItem.summonerName
+  tagLine.value = historyItem.tagLine
+  region.value = historyItem.region
+  rankedType.value = historyItem.rankedType
+  showHistory.value = false
+}
+
+// Clear search history
+const clearHistory = () => {
+  searchHistory.value = []
+  saveSearchHistory()
+  showHistory.value = false
+}
+
 const canSubmit = computed(() => {
   return summonerName.value.trim() && tagLine.value.trim()
 })
@@ -265,6 +365,14 @@ const handleSubmit = async () => {
   // Start funny message rotation
   startFunnyMessageRotation()
 
+  // Add to search history before submitting
+  addToHistory({
+    summonerName: summonerName.value.trim(),
+    tagLine: tagLine.value.trim(),
+    region: region.value,
+    rankedType: rankedType.value
+  })
+
   try {
     // Connect to WebSocket and wait for processing to complete
     const result = await connectWebSocket()
@@ -307,6 +415,11 @@ const setError = (message) => {
   progressMessage.value = ''
   stopFunnyMessageRotation()
 }
+
+// Load search history on mount
+onMounted(() => {
+  loadSearchHistory()
+})
 
 // Clean up WebSocket on component unmount
 onUnmounted(() => {
@@ -382,6 +495,148 @@ defineExpose({
   color: var(--lol-gold-light);
   margin-bottom: 2rem;
   opacity: 0.9;
+}
+
+.history-section {
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.history-toggle {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(10, 20, 40, 0.6);
+  border: 2px solid rgba(200, 155, 60, 0.3);
+  border-radius: 12px;
+  color: var(--lol-gold-light);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-toggle:hover {
+  border-color: var(--lol-gold);
+  background: rgba(10, 20, 40, 0.8);
+}
+
+.history-count {
+  background: rgba(200, 155, 60, 0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.history-dropdown {
+  margin-top: 0.5rem;
+  background: rgba(10, 20, 40, 0.8);
+  border: 2px solid rgba(200, 155, 60, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.history-items {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.history-items::-webkit-scrollbar {
+  width: 8px;
+}
+
+.history-items::-webkit-scrollbar-track {
+  background: rgba(10, 20, 40, 0.4);
+}
+
+.history-items::-webkit-scrollbar-thumb {
+  background: rgba(200, 155, 60, 0.4);
+  border-radius: 4px;
+}
+
+.history-items::-webkit-scrollbar-thumb:hover {
+  background: rgba(200, 155, 60, 0.6);
+}
+
+.history-item {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(200, 155, 60, 0.2);
+  color: var(--lol-gold-light);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-item:hover {
+  background: rgba(200, 155, 60, 0.1);
+}
+
+.history-item-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.history-name {
+  font-weight: 600;
+  color: var(--lol-gold);
+}
+
+.history-region {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(200, 155, 60, 0.2);
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.history-type {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.clear-history-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(209, 54, 57, 0.1);
+  border: none;
+  border-top: 1px solid rgba(200, 155, 60, 0.2);
+  color: var(--lol-red);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-history-btn:hover {
+  background: rgba(209, 54, 57, 0.2);
 }
 
 .input-group {

@@ -83,8 +83,8 @@
                 <div class="score-header">
                   <div class="score-badge">
                     <span class="score-label">Performance Grade</span>
-                    <div class="grade-badge-small" :class="'grade-' + props.scoreSummaries[game.matchId].overall_grade.toLowerCase()">
-                      {{ props.scoreSummaries[game.matchId].overall_grade }}
+                    <div class="grade-badge-small" :class="'grade-' + convertScoreToGrade(props.scoreSummaries[game.matchId].score || props.scoreSummaries[game.matchId].overall_grade).toLowerCase()">
+                      {{ convertScoreToGrade(props.scoreSummaries[game.matchId].score || props.scoreSummaries[game.matchId].overall_grade) }}
                     </div>
                   </div>
                   <div class="player-tags-summary" v-if="props.scoreSummaries[game.matchId].tags && props.scoreSummaries[game.matchId].tags.length > 0">
@@ -370,6 +370,22 @@ const getLaneFromContext = (game) => {
     return laneMap[playerInContext.lane] || playerInContext.lane
   }
   return 'Unknown'
+}
+
+// Convert numeric score/rating (0-10) to letter grade (S, A, B, C, D)
+const convertScoreToGrade = (score) => {
+  if (typeof score === 'string') {
+    // If already a letter grade, return as is
+    return score
+  }
+  const numScore = parseFloat(score)
+  if (isNaN(numScore)) return 'D'
+
+  if (numScore >= 8) return 'S'
+  if (numScore >= 6.5) return 'A'
+  if (numScore >= 5) return 'B'
+  if (numScore >= 3) return 'C'
+  return 'D'
 }
 
 // Fetch score summary for a specific match

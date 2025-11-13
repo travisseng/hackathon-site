@@ -19,8 +19,8 @@
           </div>
         </div>
         <div class="header-grade">
-          <div class="grade-badge" :class="'grade-' + analysisData.final_verdict.overall_grade.toLowerCase()">
-            {{ analysisData.final_verdict.overall_grade }}
+          <div class="grade-badge" :class="'grade-' + convertScoreToGrade(analysisData.final_verdict.score || analysisData.final_verdict.overall_grade).toLowerCase()">
+            {{ convertScoreToGrade(analysisData.final_verdict.score || analysisData.final_verdict.overall_grade) }}
           </div>
           <div class="grade-label">Overall Grade</div>
         </div>
@@ -76,8 +76,8 @@
         <div v-for="(phase, key) in analysisData.phase_analysis" :key="key" class="phase-card">
           <div class="phase-header">
             <h3 class="phase-name">{{ formatPhase(key) }}</h3>
-            <div class="phase-rating-grade" :class="'grade-' + phase.rating_grade.toLowerCase()">
-              {{ phase.rating_grade }}
+            <div class="phase-rating-grade" :class="'grade-' + convertScoreToGrade(phase.rating || phase.rating_grade).toLowerCase()">
+              {{ convertScoreToGrade(phase.rating || phase.rating_grade) }}
             </div>
           </div>
           <div class="phase-title">{{ phase.title }}</div>
@@ -239,6 +239,22 @@ const formatRole = (role) => {
 
 const formatPhase = (phase) => {
   return phase.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+}
+
+// Convert numeric score/rating (0-10) to letter grade (S, A, B, C, D)
+const convertScoreToGrade = (score) => {
+  if (typeof score === 'string') {
+    // If already a letter grade, return as is
+    return score
+  }
+  const numScore = parseFloat(score)
+  if (isNaN(numScore)) return 'D'
+
+  if (numScore >= 8) return 'S'
+  if (numScore >= 6.5) return 'A'
+  if (numScore >= 5) return 'B'
+  if (numScore >= 3) return 'C'
+  return 'D'
 }
 
 const calculateKDA = (kills, deaths, assists) => {
