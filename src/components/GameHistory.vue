@@ -84,7 +84,7 @@
                   <div class="score-badge">
                     <span class="score-label">Performance Grade</span>
                     <div class="grade-badge-small" :class="'grade-' + convertScoreToGrade(props.scoreSummaries[game.matchId].score || props.scoreSummaries[game.matchId].overall_grade).toLowerCase()">
-                      {{ convertScoreToGrade(props.scoreSummaries[game.matchId].score || props.scoreSummaries[game.matchId].overall_grade) }}
+                      {{ convertScoreToGrade(props.scoreSummaries[game.matchId].score || props.scoreSummaries[game.matchId].score) }}
                     </div>
                   </div>
                   <div class="player-tags-summary" v-if="props.scoreSummaries[game.matchId].tags && props.scoreSummaries[game.matchId].tags.length > 0">
