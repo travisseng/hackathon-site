@@ -408,7 +408,7 @@ const fetchScoreSummary = async (matchId, gameName, gameTag) => {
       emit('update-score', matchId, { error: true })
     } else {
       emit('update-score', matchId, {
-        overall_grade: data.overall_grade,
+        score: data.score,
         tags: data.tags || [],
         summary: data.summary,
         error: false
