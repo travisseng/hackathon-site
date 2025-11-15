@@ -19,8 +19,8 @@
           </div>
         </div>
         <div class="header-grade">
-          <div class="grade-badge" :class="'grade-' + convertScoreToGrade(analysisData.final_verdict.score || analysisData.final_verdict.overall_grade).toLowerCase()">
-            {{ convertScoreToGrade(analysisData.final_verdict.score || analysisData.final_verdict.overall_grade) }}
+          <div class="grade-badge" :class="'grade-' + convertScoreToGrade(analysisData.final_verdict.score).toLowerCase()">
+            {{ convertScoreToGrade(analysisData.final_verdict.score) }}
           </div>
           <div class="grade-label">Overall Grade</div>
         </div>

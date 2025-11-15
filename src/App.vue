@@ -563,7 +563,7 @@ const handleAnalyzeGame = async (gameId) => {
     // Update the score summary cache with the analysis result
     if (analysis && analysis.final_verdict) {
       scoreSummaries.value[gameId] = {
-        overall_grade: analysis.final_verdict.overall_grade,
+        score: analysis.final_verdict.score,
         tags: analysis.final_verdict.tags || [],
         summary: analysis.final_verdict.summary || 'Analysis complete',
         error: false
