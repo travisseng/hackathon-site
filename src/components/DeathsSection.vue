@@ -19,7 +19,7 @@
 
         <div class="stat-card">
           <div class="stat-icon">⚰️</div>
-          <div class="stat-value">{{ data.longest_death }}s</div>
+          <div class="stat-value">{{ data.longest_time_spent_dead_in_one_game }}s</div>
           <div class="stat-label">Most Time Spent Dead in a Single Game</div>
         </div>
       </div>
