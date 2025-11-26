@@ -106,12 +106,16 @@ export async function fetchAllGames(gameName, gameTag, region = 'euw1', puuid = 
  */
 function validateStatsData(data) {
   const requiredSections = [
-    'game_duration',
-    'role_champs_played',
-    'deaths_stats',
-    'kills_assists_stats',
-    'metrics',
-    'objectives'
+    'overview',
+    'time_stats',
+    'combat_stats',
+    'economy_stats',
+    'damage_stats',
+    'vision_stats',
+    'objectives',
+    'ping_stats',
+    'most_played',
+    'role_performance'
   ]
 
   for (const section of requiredSections) {

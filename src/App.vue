@@ -66,30 +66,78 @@
           </div>
         </section>
 
-        <!-- Game Duration Section -->
-        <GameDurationSection ref="durationSection" :data="statsData.game_duration" />
+        <!-- Overview Section -->
+        <OverviewSection
+          ref="overviewSection"
+          :data="statsData.overview"
+          :insights="statsData.aiInsights?.overview || []"
+        />
 
-        <!-- Champions & Roles Section -->
-        <ChampionsSection ref="championsSection" :data="statsData.role_champs_played" />
+        <!-- Most Played & Role Performance Section -->
+        <MostPlayedRoleSection
+          ref="mostPlayedRoleSection"
+          :most-played-data="statsData.most_played"
+          :role-performance-data="statsData.role_performance"
+          :insights="[
+            ...(statsData.aiInsights?.most_played || []),
+            ...(statsData.aiInsights?.role_performance || [])
+          ]"
+        />
 
-        <!-- Play Time Chart Section -->
-        <PlayTimeChart ref="chartSection" :data="getSortedPlayTime(statsData.game_duration.amount_played_year)" />
+        <!-- Time Stats Section -->
+        <TimeStatsSection
+          ref="timeStatsSection"
+          :data="statsData.time_stats"
+          :insights="statsData.aiInsights?.time_stats || []"
+        />
 
-        <!-- Deaths Section -->
-        <DeathsSection ref="deathsSection" :data="statsData.deaths_stats" />
+        <!-- Combat Stats Section -->
+        <CombatStatsSection
+          ref="combatStatsSection"
+          :data="statsData.combat_stats"
+          :insights="statsData.aiInsights?.combat_stats || []"
+        />
 
-        <!-- Kills & Assists Section -->
-        <KillsSection ref="killsSection" :data="statsData.kills_assists_stats" />
+        <!-- Economy Stats Section -->
+        <EconomyStatsSection
+          ref="economyStatsSection"
+          :data="statsData.economy_stats"
+          :insights="statsData.aiInsights?.economy_stats || []"
+        />
 
-        <!-- Metrics Section -->
-        <MetricsSection ref="metricsSection" :data="statsData.metrics" />
+        <!-- Damage Stats Section -->
+        <DamageStatsSection
+          ref="damageStatsSection"
+          :data="statsData.damage_stats"
+          :insights="statsData.aiInsights?.damage_stats || []"
+        />
+
+        <!-- Vision Stats Section -->
+        <VisionStatsSection
+          ref="visionStatsSection"
+          :data="statsData.vision_stats"
+          :insights="statsData.aiInsights?.vision_stats || []"
+        />
 
         <!-- Objectives Section -->
-        <ObjectivesSection ref="objectivesSection" :data="statsData.objectives" />
+        <ObjectivesSection
+          ref="objectivesSection"
+          :data="statsData.objectives"
+          :insights="statsData.aiInsights?.objectives || statsData.aiInsights?.objective || []"
+        />
+
+        <!-- Communication Section -->
+        <CommunicationSection
+          ref="communicationSection"
+          :data="statsData.ping_stats"
+          :insights="statsData.aiInsights?.ping_stats || []"
+        />
+
+        
 
         <!-- Shareable Card Section -->
         <ShareableCard
-          v-if="statsData.synthese"
+          v-if="statsData"
           :data="statsData"
           :account-data="accountData"
           :summoner-name="summonerDetails.summonerName"
@@ -197,13 +245,15 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import SummonerInput from './components/SummonerInput.vue'
-import GameDurationSection from './components/GameDurationSection.vue'
-import ChampionsSection from './components/ChampionsSection.vue'
-import PlayTimeChart from './components/PlayTimeChart.vue'
-import DeathsSection from './components/DeathsSection.vue'
-import KillsSection from './components/KillsSection.vue'
-import MetricsSection from './components/MetricsSection.vue'
+import OverviewSection from './components/OverviewSection.vue'
+import TimeStatsSection from './components/TimeStatsSection.vue'
+import CombatStatsSection from './components/CombatStatsSection.vue'
+import EconomyStatsSection from './components/EconomyStatsSection.vue'
+import DamageStatsSection from './components/DamageStatsSection.vue'
+import VisionStatsSection from './components/VisionStatsSection.vue'
 import ObjectivesSection from './components/ObjectivesSection.vue'
+import CommunicationSection from './components/CommunicationSection.vue'
+import MostPlayedRoleSection from './components/MostPlayedRoleSection.vue'
 import ShareableCard from './components/ShareableCard.vue'
 import GameHistory from './components/GameHistory.vue'
 import GameAnalysis from './components/GameAnalysis.vue'
@@ -309,22 +359,6 @@ const summonerDetails = ref({
   region: '',
   puuid: ''
 })
-
-// Helper function to sort amount_played_year chronologically
-const getSortedPlayTime = (playTimeData) => {
-  if (!playTimeData) return {}
-
-  // Convert to array of entries, sort by date, then convert back to object
-  const entries = Object.entries(playTimeData)
-
-  entries.sort((a, b) => {
-    const dateA = new Date(a[0])
-    const dateB = new Date(b[0])
-    return dateA - dateB
-  })
-
-  return Object.fromEntries(entries)
-}
 
 // Fetch games from API with pagination
 const fetchGames = async (page = 1) => {
@@ -592,137 +626,6 @@ const handleLoadingUpdate = (matchId, isLoading) => {
   loadingScores.value[matchId] = isLoading
 }
 
-// Mock analysis data (real data will come from API)
-const mockAnalysisData = {
-  player: { champion: "Azir", role: "MIDDLE", score: 6.5 },
-  phase_analysis: {
-    early_game: {
-      title: "Strong Early Lane Dominance",
-      rating: 8.5,
-      strengths: [
-        "Excellent CS rate (7.2/min) - maintained high farm efficiency",
-        "Gold and XP advantage over opponent (+244g, +206xp)",
-        "Quick first blood at 6:45 establishing dominance"
-      ],
-      issues: [
-        "Minimal vision control with only 1 ward placed",
-        "Limited map awareness despite strong individual performance"
-      ]
-    },
-    mid_game: {
-      title: "Inconsistent Execution with Positioning Errors",
-      rating: 5.0,
-      strengths: [
-        "Maintained farm lead with 117 CS at 8-17min mark",
-        "Secured tower kill at 12:55 contributing to objective control"
-      ],
-      issues: [
-        "Three deaths (9:31, 11:20, 13:50) indicating poor positioning",
-        "Critical death at 11:20 occurred 65s before dragon spawn",
-        "Low vision placements (4 wards) - inadequate map control"
-      ]
-    },
-    late_game: {
-      title: "Improved Performance with Persistent Positioning Issues",
-      rating: 6.5,
-      strengths: [
-        "High damage output (27k) - peak damage phase for the role",
-        "Multiple tower assists (4) contributing to victory condition"
-      ],
-      issues: [
-        "Four deaths (17:47, 19:00, 22:29, 24:41) in critical moments",
-        "Death at 19:00 occurred 59s before baron spawn - timing catastrophic"
-      ]
-    }
-  },
-  global_strengths: [
-    {
-      title: "Exceptional Damage Output",
-      details: [
-        "27k total damage - highest on team exceeding AD carry",
-        "Consistent damage contribution across all game phases"
-      ]
-    },
-    {
-      title: "Solid Laning Phase",
-      details: [
-        "7.2 CS/min early game efficiency",
-        "Lane dominance versus Qiyana matchup"
-      ]
-    }
-  ],
-  global_issues: [
-    {
-      title: "Catastrophic Objective Timing",
-      details: [
-        "Three critical deaths occurred 40-65 seconds before major objectives",
-        "Missing presence at crucial decision-making moments"
-      ]
-    },
-    {
-      title: "Poor Positioning and Deaths",
-      details: [
-        "7 total deaths across the game",
-        "Deaths clustered in mid and late game"
-      ]
-    }
-  ],
-  coaching_points: [
-    {
-      title: "Objective Timing and Positioning Around Objectives",
-      problem: "Player died at critical moments before dragons and baron, demonstrating poor objective awareness and positioning discipline.",
-      solutions: [
-        "Establish habit of checking objective timers 90 seconds before spawn",
-        "Plan positioning around objective spawn zones",
-        "Prioritize safety and objective control over extended lane farms"
-      ]
-    },
-    {
-      title: "Vision Control and Map Awareness",
-      problem: "Only 7 wards placed throughout the game severely limited map awareness and objective control setup.",
-      solutions: [
-        "Place minimum 1-2 wards per minute in mid game phases",
-        "Purchase and place control wards in river/objective areas",
-        "Use trinket proactively on objective entry points"
-      ]
-    }
-  ],
-  actionable_improvements: [
-    {
-      priority: "CRITICAL",
-      action: "Implement objective timer awareness system - check major objective spawn timers 90 seconds before spawn",
-      impact: "Prevent deaths before objectives which directly cost team preparation time. Estimated 60% reduction in pre-objective deaths."
-    },
-    {
-      priority: "CRITICAL",
-      action: "Establish minimum vision control quota - place 1.5+ wards per minute",
-      impact: "Improve map awareness enabling better positioning decisions and reducing deaths to ganks/rotations."
-    },
-    {
-      priority: "HIGH",
-      action: "Adopt conservative positioning framework - maintain minimum 1500 range from enemy team",
-      impact: "Improve survival rate as carry champion while maintaining damage output."
-    }
-  ],
-  game_outcome_analysis: {
-    summary: "Victory achieved in 24 minutes despite mixed individual performance. While Azir maintained strong damage output, critical positioning failures nearly cost the game.",
-    key_factors: [
-      "Early game dominance by Azir established gold lead",
-      "Team's macro execution overcame individual struggles",
-      "High damage output converted to kills in late game"
-    ]
-  },
-  final_verdict: {
-    summary: "Azir delivered exceptional damage output (27k) with strong early game dominance but undermined performance through critical positioning failures at objective timings. Performance rating: 6.5/10",
-    key_takeaways: [
-      "Objective timing awareness is as critical as damage output",
-      "Vision control enables better decision-making",
-      "Positioning discipline must be non-negotiable for carry roles",
-      "Early dominance creates win condition - use lead wisely"
-    ]
-  }
-}
-
 const initializeAnimations = () => {
   // Hero section animation
   gsap.from('.hero-title', {
@@ -826,14 +729,15 @@ const particlesOptions = {
 
 // Refs for sections (used for animations)
 const heroSection = ref(null)
-const durationSection = ref(null)
-const championsSection = ref(null)
-const chartSection = ref(null)
-const deathsSection = ref(null)
-const killsSection = ref(null)
-const metricsSection = ref(null)
+const overviewSection = ref(null)
+const timeStatsSection = ref(null)
+const combatStatsSection = ref(null)
+const economyStatsSection = ref(null)
+const damageStatsSection = ref(null)
+const visionStatsSection = ref(null)
 const objectivesSection = ref(null)
-const finalSection = ref(null)
+const communicationSection = ref(null)
+const mostPlayedRoleSection = ref(null)
 </script>
 
 <style scoped>

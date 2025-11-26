@@ -57,34 +57,56 @@
           <!-- Key Stats Grid -->
           <div class="stats-grid">
             <div class="stat-box">
-              <div class="stat-number">{{ data.synthese.gameplayed }}</div>
+              <div class="stat-number">{{ data.overview.games_played }}</div>
               <div class="stat-label">Games</div>
             </div>
             <div class="stat-box">
-              <div class="stat-number">{{ (data.synthese.winrate * 100).toFixed(0) }}%</div>
+              <div class="stat-number">{{ (data.overview.winrate * 100).toFixed(0) }}%</div>
               <div class="stat-label">Win Rate</div>
             </div>
             <div class="stat-box">
-              <div class="stat-number">{{ data.synthese.kda_avg.toFixed(1) }}</div>
-              <div class="stat-label">KDA</div>
+              <div class="stat-number kda-breakdown">{{ data.combat_stats.average.kills.toFixed(1) }} / {{ data.combat_stats.average.deaths.toFixed(1) }} / {{ data.combat_stats.average.assists.toFixed(1) }}</div>
+              <div class="stat-label">K / D / A</div>
+              <div class="kda-ratio">{{ data.combat_stats.average.kda.toFixed(2) }} KDA</div>
             </div>
           </div>
 
           <!-- Performance Stats -->
           <div class="performance-stats">
-            <div class="stat-box performance">
+            <div class="stat-box secondary">
+              <div class="stat-number">{{ getTotalPlaytimeHours() }}</div>
+              <div class="stat-label">Hours Played</div>
+            </div>
+            <div class="stat-box secondary">
               <div class="stat-number">{{ getMultikills() }}</div>
               <div class="stat-label">Penta/Quadra/Triple</div>
+            </div>
+            <div class="stat-box secondary">
+              <div class="stat-number">{{ getCSPerMin() }}</div>
+              <div class="stat-label">CS/Min</div>
+            </div>
+            
+            
+          </div>
+
+          <!-- Additional Stats -->
+          <div class="secondary-stats">
+            <div class="stat-box performance">
+              <div class="stat-number">{{ getVPM() }}</div>
+              <div class="stat-label">VPM</div>
+              <div class="stat-sublabel">Vision Per Minute</div>
+            </div>
+            <div class="stat-box performance">
+              <div class="stat-number">{{ getDPM() }}</div>
+              <div class="stat-label">DPM</div>
+              <div class="stat-sublabel">Damage Per Minute</div>
             </div>
             <div class="stat-box performance">
               <div class="stat-number">{{ getCSPerMin() }}</div>
               <div class="stat-label">CS/Min</div>
             </div>
-            <div class="stat-box performance">
-              <div class="stat-number">{{ getFirstBloods() }}</div>
-              <div class="stat-label">First Bloods</div>
-            </div>
           </div>
+
 
           <!-- Monthly Activity Chart -->
           <div class="activity-chart">
@@ -106,22 +128,7 @@
             </div>
           </div>
 
-          <!-- Additional Stats -->
-          <div class="secondary-stats">
-            <div class="stat-box secondary">
-              <div class="stat-number">{{ data.synthese.visionScore_avg.toFixed(0) }}</div>
-              <div class="stat-label">Average Vision</div>
-            </div>
-            <div class="stat-box secondary">
-              <div class="stat-number">{{ formatNumber(data.synthese.total_damage_to_champions_avg) }}</div>
-              <div class="stat-label">Average Damage</div>
-            </div>
-            <div class="stat-box secondary">
-              <div class="stat-number">{{ data.synthese.champion_pool }}</div>
-              <div class="stat-label">Champion Pool</div>
-            </div>
-          </div>
-
+          
           <!-- Footer -->
           <div class="card-footer-story">
             <div class="footer-watermark">League of Legends • 2025 Wrapped</div>
@@ -227,21 +234,21 @@ const formatChampionName = (name) => {
 }
 
 const getTopChampion = () => {
-  const champions = props.data.synthese.role_champs_played.most_played_champ
+  const champions = props.data.most_played.champions
   const entries = Object.entries(champions)
   if (entries.length === 0) return 'Unknown'
   return entries[0][0]
 }
 
 const getTopChampionGames = () => {
-  const champions = props.data.synthese.role_champs_played.most_played_champ
+  const champions = props.data.most_played.champions
   const entries = Object.entries(champions)
   if (entries.length === 0) return 0
   return entries[0][1]
 }
 
 const getTop3Champions = () => {
-  const champions = props.data.synthese.role_champs_played.most_played_champ
+  const champions = props.data.most_played.champions
   const entries = Object.entries(champions)
 
   // Sort by games played (descending) and take top 3
@@ -261,7 +268,7 @@ const getChampionSplashArtByName = (championName) => {
 }
 
 const getMostPlayedRole = () => {
-  const roles = props.data.synthese.role_champs_played.most_played_role
+  const roles = props.data.most_played.roles
   const entries = Object.entries(roles)
   if (entries.length === 0) return 'Unknown'
 
@@ -272,14 +279,15 @@ const getMostPlayedRole = () => {
     'JUNGLE': 'Jungle',
     'MIDDLE': 'Mid',
     'BOTTOM': 'ADC',
-    'UTILITY': 'Support'
+    'UTILITY': 'Support',
+    'SUPPORT': 'Support'
   }
 
   return roleNames[role] || role
 }
 
 const getMostPlayedRoleIcon = () => {
-  const roles = props.data.synthese.role_champs_played.most_played_role
+  const roles = props.data.most_played.roles
   const entries = Object.entries(roles)
   if (entries.length === 0) return 'https://wiki.leagueoflegends.com/en-us/images/Middle_icon.png'
 
@@ -290,7 +298,8 @@ const getMostPlayedRoleIcon = () => {
     'JUNGLE': 'https://wiki.leagueoflegends.com/en-us/images/Jungle_icon.png',
     'MIDDLE': 'https://wiki.leagueoflegends.com/en-us/images/Middle_icon.png',
     'BOTTOM': 'https://wiki.leagueoflegends.com/en-us/images/Bottom_icon.png',
-    'UTILITY': 'https://wiki.leagueoflegends.com/en-us/images/Support_icon.png'
+    'UTILITY': 'https://wiki.leagueoflegends.com/en-us/images/Support_icon.png',
+    'SUPPORT': 'https://wiki.leagueoflegends.com/en-us/images/Support_icon.png'
   }
   return iconUrls[role] || 'https://wiki.leagueoflegends.com/en-us/images/Middle_icon.png'
 }
@@ -303,30 +312,47 @@ const formatNumber = (num) => {
 }
 
 const getMultikills = () => {
-  // Get from kills_assists_stats
-  const killsData = props.data.kills_assists_stats || {}
-  const pentas = killsData.penta_kills || 0
-  const quadras = killsData.quadra_kills || 0
-  const triples = killsData.triple_kills || 0
+  // Get from combat_stats
+  const combatStats = props.data.combat_stats.total || {}
+  const pentas = combatStats.penta_kills || 0
+  const quadras = combatStats.quadra_kills || 0
+  const triples = combatStats.triple_kills || 0
 
   return `${pentas}/${quadras}/${triples}`
 }
 
 const getCSPerMin = () => {
-  // Get from metrics
-  const metrics = props.data.metrics || {}
-  const csMin = metrics.avg_cs_min || 0
+  // Get from economy_stats
+  const economyStats = props.data.economy_stats.average || {}
+  const csMin = economyStats.cs_per_min || 0
   return csMin ? csMin.toFixed(1) : '0.0'
 }
 
-const getFirstBloods = () => {
-  // Get from kills_assists_stats
-  const killsData = props.data.kills_assists_stats || {}
-  return killsData.firstbloodkills || 0
+const getTotalPlaytimeHours = () => {
+  // Get total game time in seconds and convert to hours
+  const totalSeconds = props.data.time_stats.total.game_time || 0
+  const hours = totalSeconds / 3600
+  return Math.round(hours)
+}
+
+const getDPM = () => {
+  // Calculate damage per minute: average damage / (average game duration in seconds / 60)
+  const avgDamage = props.data.damage_stats.average.damage_dealt || 0
+  const avgDuration = props.data.time_stats.average.game_duration || 1 // Avoid division by zero
+  const dpm = avgDamage / (avgDuration / 60)
+  return Math.round(dpm)
+}
+
+const getVPM = () => {
+  // Calculate vision per minute: average vision score / (average game duration in seconds / 60)
+  const avgVision = props.data.vision_stats.average.vision_score || 0
+  const avgDuration = props.data.time_stats.average.game_duration || 1 // Avoid division by zero
+  const vpm = avgVision / (avgDuration / 60)
+  return vpm.toFixed(1)
 }
 
 const getMonthlyData = () => {
-  const monthlyData = props.data.synthese.amount_played_year || {}
+  const monthlyData = props.data.time_stats.by_month || {}
 
   // Define all 12 months of 2025
   const months2025 = [
@@ -591,10 +617,10 @@ const resetApp = () => {
 .stats-half {
   flex: 1.15;
   background: linear-gradient(to bottom, var(--lol-dark), rgba(10, 20, 40, 1));
-  padding: 1rem 1.2rem 0.8rem;
+  padding: 0.5rem 1rem 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 /* Rank Display */
@@ -677,7 +703,7 @@ const resetApp = () => {
   backdrop-filter: blur(20px);
   border: 2px solid rgba(200, 155, 60, 0.4);
   border-radius: 12px;
-  padding: 0.75rem 0.4rem;
+  padding: 0.23rem 0.4rem;
   text-align: center;
 }
 
@@ -689,6 +715,11 @@ const resetApp = () => {
   margin-bottom: 0.25rem;
 }
 
+.stat-number.kda-breakdown {
+  font-size: 0.9rem;
+  line-height: 1.1;
+}
+
 .stat-label {
   font-size: 0.55rem;
   color: var(--lol-gold-light);
@@ -696,6 +727,23 @@ const resetApp = () => {
   letter-spacing: 0.05em;
   opacity: 0.9;
   line-height: 1.2;
+}
+
+.stat-sublabel {
+  font-size: 0.4rem;
+  color: var(--lol-gold-light);
+  opacity: 0.6;
+  margin-top: 0.15rem;
+  line-height: 1;
+  text-transform: capitalize;
+}
+
+.kda-ratio {
+  font-size: 0.5rem;
+  color: var(--lol-gold);
+  font-weight: 700;
+  margin-top: 0.2rem;
+  opacity: 0.8;
 }
 
 /* Performance Stats */
