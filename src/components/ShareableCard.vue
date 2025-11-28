@@ -82,8 +82,8 @@
               <div class="stat-label">Penta/Quadra/Triple</div>
             </div>
             <div class="stat-box secondary">
-              <div class="stat-number">{{ getCSPerMin() }}</div>
-              <div class="stat-label">CS/Min</div>
+              <div class="stat-number">{{ data.overview.champion_pool }}</div>
+              <div class="stat-label">Champion Pool</div>
             </div>
             
             

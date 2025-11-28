@@ -223,7 +223,7 @@ defineEmits(['back'])
 
 const getChampionIcon = (championName) => {
   const cleanName = championName.replace(/[^a-zA-Z]/g, '')
-  return `https://ddragon.leagueoflegends.com/cdn/15.22.1/img/champion/${cleanName}.png`
+  return `https://ddragon.leagueoflegends.com/cdn/15.23.1/img/champion/${cleanName}.png`
 }
 
 const formatRole = (role) => {
